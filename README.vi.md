@@ -38,29 +38,38 @@ AINOVEL_LOCALE=zh ainovel-cli
 
 ## Phạm vi Việt hóa hiện tại
 
-Các asset ảnh hưởng trực tiếp đến flow sáng tác đã có bản Việt đầy đủ:
+Toàn bộ prompt đang được runtime load đã có bản Việt đầy đủ:
 
-- Architect Short system prompt
-- Architect Long system prompt
-- Writer system prompt
-- Editor system prompt
+- Architect Short
+- Architect Long
+- Writer
+- Editor
+- import-segment / import-analyze / import-synthesize / import-range
+- revision-analyze
+- simulation-source / simulation-merge
+- arbiter-plan-start / arbiter-intervention / arbiter-failure
+
+Các asset văn phong quan trọng đã có bản Việt:
+
 - writing voice
 - anti-AI-tone reference
 - default writing style
 
-Các function prompt phụ như import / simulation / revision / arbiter hiện tiếp tục dùng **prompt upstream mới nhất + chỉ thị output tiếng Việt**. Đây là chủ ý: chúng nằm sát protocol và thay đổi upstream thường xuyên hơn, nên chỉ dịch khi có lợi ích rõ hơn chi phí sync.
+Fallback upstream + chỉ thị output tiếng Việt vẫn được giữ trong loader như một **cơ chế an toàn cho tương lai**: nếu upstream thêm prompt mới hoặc một overlay bị chủ động gỡ vì chưa port kịp protocol, fork vẫn chạy trên contract upstream mới nhất.
 
 Source Go, domain model, tool/schema identifier và comment nội bộ không được dịch chỉ để “trông Việt hơn”. Đây là chủ ý để giảm maintenance debt.
 
-## Guard cho protocol của core agents
+## Guard cho protocol
 
-Bản dịch core-agent có smoke test kiểm tra các token máy đọc quan trọng vẫn tồn tại. Ví dụ:
+Bản dịch prompt có smoke test kiểm tra các token máy đọc quan trọng vẫn tồn tại. Ví dụ:
 
 - Architect Short: `save_book`, `save_foundation`, `revise_outline`, `audit_foundation`, `foundation_ready`, `remaining`.
 - Architect Long: `layered_outline`, `update_compass`, `append_volume`, `complete_book`, `expand_arc`, `final_volume`, `open_threads`, `completion_signals`.
 - Editor: `save_review`, `requires_change`, `rule_violations`, `accept`, `polish`, `rewrite`.
+- Import: enum/value domain như `hook_type`, `dominant_strand`, `planning_tier`, `story_status`, boundary kind và foreshadow action.
+- Arbiter: thứ tự action `answer → rules → hold → reopen → dispatch`, các trạng thái `rewrites_drained`, `phase = complete`, `dynamic_planning`, cùng tập agent hợp lệ.
 
-Test không khóa câu chữ dịch; mục tiêu là ngăn một lần chỉnh wording vô tình làm rơi protocol.
+Test không khóa câu chữ dịch; mục tiêu là ngăn một lần chỉnh wording vô tình làm rơi protocol hoặc đổi routing behavior.
 
 ## Override của người dùng vẫn được ưu tiên
 
@@ -94,7 +103,7 @@ Trước release đầu tiên, build trực tiếp từ source là cách chắc 
 
 Không đổi module path `github.com/voocel/ainovel-cli`. Khi upstream có thay đổi, merge/rebase upstream như một fork bình thường; phần khác biệt của bản Việt chủ yếu nằm trong `assets/locales/` và một hook nhỏ ở startup/release boundary.
 
-Khi upstream sửa protocol trong một prompt chưa có bản Việt hóa, fallback sẽ dùng ngay prompt upstream mới. Với prompt đã dịch đầy đủ, cần review diff upstream và cập nhật bản dịch tương ứng trước khi phát hành bản Việt tiếp theo.
+Khi upstream sửa protocol trong một prompt đã dịch đầy đủ, phải review diff upstream và port đầy đủ thay đổi behavior trước khi phát hành bản Việt tiếp theo. Nếu chưa port an toàn được, **ưu tiên gỡ/không phát hành overlay đó để runtime fallback về prompt upstream mới + chỉ thị tiếng Việt**, thay vì giữ một bản dịch stale.
 
 ## Phát triển bản dịch
 
@@ -107,6 +116,8 @@ assets/prompts/editor.md
 → assets/locales/vi/prompts/editor.md
 ```
 
+Checklist chi tiết nằm trong `assets/locales/vi/prompts/README.md` và `CONTRACT.md`.
+
 Trước khi merge, chạy:
 
 ```bash
@@ -118,7 +129,8 @@ Các test locale kiểm tra ít nhất:
 - bản Việt được nạp thật;
 - `{{VOICE}}` không bị mất;
 - core-agent không làm rơi token protocol quan trọng;
-- prompt chưa dịch vẫn nhận chỉ thị output tiếng Việt;
+- function prompt không làm rơi enum/routing contract quan trọng;
+- fallback prompt vẫn nhận chỉ thị output tiếng Việt;
 - `AINOVEL_LOCALE=zh` giữ asset upstream nguyên vẹn;
 - apply locale nhiều lần không làm prompt phình lặp;
 - global/book style override vẫn thắng localized builtin.
