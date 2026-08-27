@@ -38,16 +38,29 @@ AINOVEL_LOCALE=zh ainovel-cli
 
 ## Phạm vi Việt hóa hiện tại
 
-Các asset đã có bản Việt đầy đủ:
+Các asset ảnh hưởng trực tiếp đến flow sáng tác đã có bản Việt đầy đủ:
 
+- Architect Short system prompt
+- Architect Long system prompt
 - Writer system prompt
+- Editor system prompt
 - writing voice
 - anti-AI-tone reference
 - default writing style
 
-Các core/function prompt khác hiện dùng fallback upstream + chỉ thị output tiếng Việt cho tới khi có bản dịch được review theo đúng protocol mới nhất.
+Các function prompt phụ như import / simulation / revision / arbiter hiện tiếp tục dùng **prompt upstream mới nhất + chỉ thị output tiếng Việt**. Đây là chủ ý: chúng nằm sát protocol và thay đổi upstream thường xuyên hơn, nên chỉ dịch khi có lợi ích rõ hơn chi phí sync.
 
 Source Go, domain model, tool/schema identifier và comment nội bộ không được dịch chỉ để “trông Việt hơn”. Đây là chủ ý để giảm maintenance debt.
+
+## Guard cho protocol của core agents
+
+Bản dịch core-agent có smoke test kiểm tra các token máy đọc quan trọng vẫn tồn tại. Ví dụ:
+
+- Architect Short: `save_book`, `save_foundation`, `revise_outline`, `audit_foundation`, `foundation_ready`, `remaining`.
+- Architect Long: `layered_outline`, `update_compass`, `append_volume`, `complete_book`, `expand_arc`, `final_volume`, `open_threads`, `completion_signals`.
+- Editor: `save_review`, `requires_change`, `rule_violations`, `accept`, `polish`, `rewrite`.
+
+Test không khóa câu chữ dịch; mục tiêu là ngăn một lần chỉnh wording vô tình làm rơi protocol.
 
 ## Override của người dùng vẫn được ưu tiên
 
@@ -104,6 +117,7 @@ Các test locale kiểm tra ít nhất:
 
 - bản Việt được nạp thật;
 - `{{VOICE}}` không bị mất;
+- core-agent không làm rơi token protocol quan trọng;
 - prompt chưa dịch vẫn nhận chỉ thị output tiếng Việt;
 - `AINOVEL_LOCALE=zh` giữ asset upstream nguyên vẹn;
 - apply locale nhiều lần không làm prompt phình lặp;
