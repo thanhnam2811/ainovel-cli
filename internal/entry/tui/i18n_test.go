@@ -1,6 +1,9 @@
 package tui
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSharedTUIDefaultsToVietnamese(t *testing.T) {
 	t.Setenv("AINOVEL_LOCALE", "")
@@ -25,5 +28,29 @@ func TestSharedTUIChineseControlPreservesUpstream(t *testing.T) {
 	}
 	if got := localizedCommandDescription("help", "查看命令列表"); got != "查看命令列表" {
 		t.Fatalf("command description zh control = %q", got)
+	}
+}
+
+func TestRenderedTUILocalizesChromeButPreservesArbitraryStoryText(t *testing.T) {
+	t.Setenv("AINOVEL_LOCALE", "vi")
+	story := "他决定快速开始调查，但这只是小说正文。"
+	view := "加载中...\n" + story + "\n" + panelTitleStyle.Render("概览")
+	got := localizeRenderedTUI(view)
+	if !strings.Contains(got, "Đang tải...") {
+		t.Fatalf("fixed chrome was not localized: %q", got)
+	}
+	if !strings.Contains(got, story) {
+		t.Fatalf("arbitrary story text changed: %q", got)
+	}
+	if !strings.Contains(got, panelTitleStyle.Render("Tổng quan")) {
+		t.Fatalf("styled section title was not localized: %q", got)
+	}
+}
+
+func TestRenderedTUIChineseControlIsExact(t *testing.T) {
+	t.Setenv("AINOVEL_LOCALE", "zh")
+	view := "加载中...\n" + panelTitleStyle.Render("概览")
+	if got := localizeRenderedTUI(view); got != view {
+		t.Fatalf("zh control changed rendered TUI: got %q want %q", got, view)
 	}
 }
