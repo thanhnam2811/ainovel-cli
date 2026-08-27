@@ -1,6 +1,6 @@
 # ainovel-cli — Vietnamese upstream-friendly fork
 
-Bản fork tiếng Việt của [`voocel/ainovel-cli`](https://github.com/voocel/ainovel-cli), giữ engine upstream gần nguyên vẹn và phủ lớp Việt hóa ở prompt/reference/style boundary.
+Bản fork tiếng Việt của [`voocel/ainovel-cli`](https://github.com/voocel/ainovel-cli), giữ engine upstream gần nguyên vẹn và phủ lớp Việt hóa ở creative/semantic asset boundary: prompt, reference, voice và style.
 
 > **Trạng thái release:** fork hiện chưa phát hành GitHub Release riêng. Để tránh cài nhầm binary upstream không có lớp Việt hóa, **chưa dùng installer/release command** cho tới khi release đầu tiên của fork được publish sau khi CI xanh.
 
@@ -14,6 +14,8 @@ Bản fork tiếng Việt của [`voocel/ainovel-cli`](https://github.com/voocel
 - global/book style override vẫn thắng localized builtin;
 - module path vẫn giữ `github.com/voocel/ainovel-cli` để giảm conflict khi sync upstream.
 
+**Phạm vi có chủ ý:** đây là bản địa hóa lớp sáng tác/ngữ nghĩa, không phải bản dịch toàn bộ source/UI. Các label/log/task nội bộ thuộc deterministic engine/TUI vẫn có thể dùng tiếng Trung upstream nếu việc dịch chúng không cần thiết cho correctness. Những boundary có ảnh hưởng chức năng — parser, eval, installer, updater, release, Docker — được test riêng trong fork.
+
 Chi tiết thiết kế, phạm vi localization và policy sync: **[README.vi.md](README.vi.md)**.
 
 ## Cài và chạy hiện tại
@@ -24,11 +26,11 @@ Fork chưa có release binary riêng, vì vậy build từ source là đường 
 git clone https://github.com/thanhnam2811/ainovel-cli.git
 cd ainovel-cli
 
-go build -o ainovel-cli ./cmd/ainovel-cli
+GOWORK=off go build -o ainovel-cli ./cmd/ainovel-cli
 ./ainovel-cli
 ```
 
-Repo đang theo toolchain được khai báo trong `go.mod`; nếu Go hỗ trợ toolchain auto-download, nó sẽ dùng đúng version cần thiết.
+Repo dùng toolchain khai báo trong `go.mod`; nếu bản Go bootstrap hỗ trợ toolchain auto-download, nó sẽ lấy đúng version cần thiết.
 
 Không chạy:
 
@@ -52,26 +54,28 @@ Mặc định không cần set biến môi trường:
 ./ainovel-cli
 ```
 
-sẽ chạy locale tiếng Việt.
+sẽ dùng creative/semantic asset tiếng Việt.
 
 ## Kiến trúc và tài liệu upstream
 
-Fork không cố copy/Việt hóa toàn bộ comment và tài liệu engine vì việc đó làm tăng maintenance debt. Kiến trúc cốt lõi, flow, store/checkpoint, import/revision/eval và lịch sử thiết kế vẫn theo upstream:
+Fork không copy/Việt hóa toàn bộ comment và tài liệu engine vì việc đó làm tăng maintenance debt. Kiến trúc cốt lõi, flow, store/checkpoint, import/revision/eval và lịch sử thiết kế vẫn theo upstream:
 
 - [Upstream repository](https://github.com/voocel/ainovel-cli)
 - [Upstream README](https://github.com/voocel/ainovel-cli/blob/main/README.md)
 - [`docs/`](docs/)
 
-Downstream diff chủ yếu nên tiếp tục tập trung ở `assets/locales/`, test contract, và các boundary thật sự cần biết locale.
+Downstream diff nên tiếp tục tập trung ở `assets/locales/`, test contract và các boundary thật sự cần biết locale.
 
 ## Validation trước release
 
 ```bash
 gofmt -l .
-go vet ./...
-go test -buildvcs=false -count=1 ./...
-go test -race -count=1 ./internal/host ./internal/store ./internal/tools
-bash -n scripts/install.sh
+GOWORK=off go vet ./...
+GOWORK=off go test -buildvcs=false -count=1 ./...
+GOWORK=off go test -race -buildvcs=false -count=1 ./internal/host ./internal/store ./internal/tools
+sh -n scripts/install.sh
+sh -n scripts/check-fork-boundaries.sh
+sh scripts/check-fork-boundaries.sh
 ```
 
 Không publish release nếu các check trên chưa xanh.
