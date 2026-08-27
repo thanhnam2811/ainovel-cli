@@ -108,12 +108,13 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 	// FillDefaults 必须先于资产加载:OutputDir 是运行时字段,默认值在此归一——
 	// 否则默认配置下 <书目录>/style/ 的本书级文风覆盖永远不会被加载。
 	cfg.FillDefaults()
-	bundle := assets.Load(cfg.Style, assets.DefaultLoadOptions(cfg.OutputDir))
+	loadOpts := assets.DefaultLoadOptions(cfg.OutputDir)
+	bundle := assets.Load(cfg.Style, loadOpts)
 	locale := strings.TrimSpace(os.Getenv("AINOVEL_LOCALE"))
 	if locale == "" {
 		locale = "vi"
 	}
-	if err := assets.ApplyLocale(&bundle, locale); err != nil {
+	if err := assets.ApplyLocale(&bundle, locale, loadOpts); err != nil {
 		die("locale: %v", err)
 	}
 	if opts.Headless {
