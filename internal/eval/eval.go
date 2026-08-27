@@ -99,7 +99,11 @@ func Command(argv []string) int {
 		if variantName == "" {
 			runs := make([]RunResult, 0, *repeat)
 			for i := 1; i <= *repeat; i++ {
-				bundle := assets.Load(style, assets.LoadOptions{}) // 纯内置,确定性 baseline,不受本机覆盖污染
+				bundle, err := loadEvalBundle(style)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "eval: locale 加载失败: %v\n", err)
+					return 2
+				}
 				dir := runDir(*outDir, c.ID, ArmSingle, i, *repeat)
 				res := runOne(cfg, bundle, c, dir, *timeout, progressW)
 				res.Arm, res.Repeat = ArmSingle, i
@@ -113,14 +117,24 @@ func Command(argv []string) int {
 		runs := make([]RunResult, 0, *repeat*2)
 		deltas := make([]Delta, 0, *repeat)
 		for i := 1; i <= *repeat; i++ {
-			baseBundle := assets.Load(style, assets.LoadOptions{})
+			baseBundle, err := loadEvalBundle(style)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "eval: baseline locale 加载失败: %v\n", err)
+				return 2
+			}
 			baseDir := runDir(*outDir, c.ID, ArmBaseline, i, *repeat)
 			base := runOne(cfg, baseBundle, c, baseDir, *timeout, progressW)
 			base.Arm, base.Repeat = ArmBaseline, i
 			runs = append(runs, RunResult{Arm: ArmBaseline, Repeat: i, Result: base})
 			fmt.Fprintf(os.Stderr, "  → baseline#%d %s\n", i, base.Outcome)
 
-			varBundle := assets.Load(style, assets.LoadOptions{})
+			varBundle, err := loadEvalBundle(style)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "eval: variant locale 加载失败: %v\n", err)
+				return 2
+			}
+			// Locale is the runtime baseline. A/B variant remains the final layer so
+			// the experiment actually measures the supplied prompt override.
 			if err := applyVariant(&varBundle, variantPrompts); err != nil {
 				fmt.Fprintf(os.Stderr, "eval: variant 覆盖失败: %v\n", err)
 				return 2
@@ -147,6 +161,22 @@ func Command(argv []string) int {
 		return 1
 	}
 	return 0
+}
+
+// loadEvalBundle mirrors the runtime locale boundary while keeping eval
+// deterministic with built-in-only assets. The fork defaults to Vietnamese,
+// and AINOVEL_LOCALE=zh remains an explicit upstream-control mode.
+func loadEvalBundle(style string) (assets.Bundle, error) {
+	opts := assets.LoadOptions{}
+	bundle := assets.Load(style, opts)
+	locale := strings.TrimSpace(os.Getenv("AINOVEL_LOCALE"))
+	if locale == "" {
+		locale = "vi"
+	}
+	if err := assets.ApplyLocaleForStyle(&bundle, locale, style, opts); err != nil {
+		return assets.Bundle{}, err
+	}
+	return bundle, nil
 }
 
 func runOne(cfg bootstrap.Config, bundle assets.Bundle, c Case, dir string, timeout time.Duration, progressW io.Writer) Result {
