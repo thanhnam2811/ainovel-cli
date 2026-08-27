@@ -17,16 +17,12 @@ import (
 	"github.com/voocel/agentcore"
 	"github.com/voocel/agentcore/schema"
 	"github.com/voocel/ainovel-cli/internal/llmcontract"
+	"github.com/voocel/ainovel-cli/internal/localization"
 	"github.com/voocel/ainovel-cli/internal/rules"
 )
 
-// normalizeMaxTokens 单次归一化的输出上限（思考 token 与 JSON 输出共享这一预算）。
-// 归一化 JSON 本身很小（通常 <1k），这里留大头是给"无法关闭思考的推理模型"的思考预算——
-// 留窄了思考会挤占 JSON 导致截断、解析失败。max_tokens 是上限不是计费量，调大不增成本。
 const normalizeMaxTokens = 8192
 
-// normalizeContract 紧邻边界 DTO：全字段 required、fatigue_words 用对象数组
-// （strict 模式禁止动态 key 的 map），两种模式共用同一 DTO 约定。
 var normalizeContract = llmcontract.Contract{
 	Name:        "userrules_normalize",
 	Description: "把用户自然语言写作规则归一化为结构化字段",
@@ -45,24 +41,14 @@ var normalizeContract = llmcontract.Contract{
 	),
 }
 
-// Normalizer 把单个来源的自然语言规则归一化成 rules.Candidate。
 type Normalizer struct {
 	model agentcore.ChatModel
 }
 
-// NewNormalizer 用一个 ChatModel 构造归一化器。归一化是一次性启动工具，
-// 应传入能力较强的模型（如 ModelSet 的默认模型），不必跟随写作的弱模型。
-//
-// 归一化不覆盖 thinking：显式 off 本身也是只有部分模型支持的推理参数，
-// 普通 chat 模型会拒绝它。沿用 provider/model 默认，由 normalizeMaxTokens
-// 为不可关闭思考的模型预留输出预算。
 func NewNormalizer(model agentcore.ChatModel) *Normalizer {
 	return &Normalizer{model: model}
 }
 
-// Normalize 归一化一个来源。失败返回 error（含真实原因），由调用方决定降级
-// （Service.normalizeOrDegrade 落 degraded 候选）——技术错误不再伪装成正常结果，
-// 终止错误（鉴权/权限等）不重试。
 func (n *Normalizer) Normalize(ctx context.Context, source, text string) (rules.Candidate, error) {
 	text = strings.TrimSpace(text)
 	if text == "" {
@@ -74,7 +60,7 @@ func (n *Normalizer) Normalize(ctx context.Context, source, text string) (rules.
 
 	out, err := llmcontract.Execute(ctx, n.model, llmcontract.Request[normalizerOutput]{
 		Contract:     normalizeContract,
-		SystemPrompt: normalizerSystemPrompt,
+		SystemPrompt: activeNormalizerSystemPrompt(),
 		Payload:      text,
 		Options:      []agentcore.CallOption{agentcore.WithMaxTokens(normalizeMaxTokens)},
 		Validate: func(out *normalizerOutput) error {
@@ -101,8 +87,6 @@ func (n *Normalizer) Normalize(ctx context.Context, source, text string) (rules.
 	return out.toCandidate(source)
 }
 
-// degraded 构造一个降级候选：归一化失败时把原文当作风格偏好，不提炼任何机械规则。
-// uncertain 标注来源（便于回显"哪些来源未能解析"），但不含技术错误细节——技术错误只进日志。
 func degraded(source, text string) rules.Candidate {
 	return rules.Candidate{
 		Source:      source,
@@ -112,8 +96,6 @@ func degraded(source, text string) rules.Candidate {
 	}
 }
 
-// normalizerOutput 是归一化器约定的边界 DTO（两种模式共用）：uncertain 固定
-// 字符串数组，fatigue_words 固定对象数组——形态由契约钉死，不再多形态猜测。
 type normalizerOutput struct {
 	Structured  normalizerStructured `json:"structured"`
 	Preferences string               `json:"preferences"`
@@ -132,8 +114,6 @@ type fatigueWordEntry struct {
 	MaxPerChapter int    `json:"max_per_chapter"`
 }
 
-// toCandidate 校验边界 DTO 并转成领域候选：fatigue 条目须词非空、上限为正整数
-// （校验错误可反馈给模型修正），领域侧仍是 map[string]int。
 func (o normalizerOutput) toCandidate(source string) (rules.Candidate, error) {
 	var fatigue map[string]int
 	for _, e := range o.Structured.FatigueWords {
@@ -172,9 +152,14 @@ func nonEmpty(in []string) []string {
 	return out
 }
 
-// normalizerSystemPrompt 只描述归一化语义，输出结构由 normalizeContract 单点维护。
-// 已用 10 条真实例子（含阈值发明陷阱）验证保守提升成立（10/10）。
-const normalizerSystemPrompt = `你是 AI 小说写作系统的「规则归一化器」。你读取用户某一个来源的长期写作规则（自然语言），把明确且可机械检查的规则提升到 structured，其余内容归入 preferences 或 uncertain。
+func activeNormalizerSystemPrompt() string {
+	if localization.IsVietnamese() {
+		return viNormalizerSystemPrompt
+	}
+	return zhNormalizerSystemPrompt
+}
+
+const zhNormalizerSystemPrompt = `你是 AI 小说写作系统的「规则归一化器」。你读取用户某一个来源的长期写作规则（自然语言），把明确且可机械检查的规则提升到 structured，其余内容归入 preferences 或 uncertain。
 
 【保守提升——最重要】
 - 只有用户明确、无歧义时才写入 structured。
@@ -186,3 +171,16 @@ const normalizerSystemPrompt = `你是 AI 小说写作系统的「规则归一�
 
 preferences 用一段可读的自然语言保留风格、人物与审美偏好。
 uncertain 说明你故意没有提升到 structured 的项目及原因。`
+
+const viNormalizerSystemPrompt = `Bạn là bộ chuẩn hóa quy tắc của một hệ thống viết tiểu thuyết bằng AI. Bạn đọc một nguồn quy tắc viết dài hạn do người dùng cung cấp bằng ngôn ngữ tự nhiên, nâng những yêu cầu thật sự rõ ràng và có thể kiểm tra máy móc vào structured; phần còn lại phải nằm trong preferences hoặc uncertain.
+
+Nguyên tắc bảo thủ — quan trọng nhất:
+- Chỉ đưa vào structured khi ý của người dùng rõ ràng và không mơ hồ.
+- forbidden_chars/forbidden_phrases là ràng buộc mức lỗi: chỉ nâng những lệnh cấm trực tiếp kiểu "không được xuất hiện X", "cấm X", "đừng viết X".
+- fatigue_words chỉ được dùng khi người dùng nêu cả một từ/cụm từ cụ thể và một ngưỡng số lần cụ thể. Các yêu cầu kiểu "ít dùng X" hoặc "đừng lạm dụng X" nhưng không có số phải để trong preferences; tuyệt đối không tự bịa threshold.
+- Mọi mong muốn về độ dài như "mỗi chương khoảng 3000 từ" hoặc "viết ngắn hơn" phải nằm trong preferences. Độ dài chương là vấn đề nhịp kể, không biến thành kiểm tra cơ học ở đây.
+- Yêu cầu phụ thuộc ngữ cảnh, không thể kiểm tra máy móc hoặc không có ngưỡng rõ ràng phải nằm trong preferences.
+- Thà bỏ sót một mục khỏi structured còn hơn nâng sai và gây cảnh báo giả ở mọi chương.
+
+preferences phải giữ lại bằng tiếng Việt tự nhiên các sở thích về phong cách, nhân vật và thẩm mỹ của người dùng.
+uncertain phải giải thích ngắn gọn bằng tiếng Việt những mục bạn chủ động không nâng vào structured và lý do.`

@@ -38,6 +38,7 @@ archives:
           - zip
     files:
       - README.md
+      - README.vi.md
       - LICENSE
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_
@@ -72,5 +73,5 @@ changelog:
 
 release:
   github:
-    owner: voocel
+    owner: thanhnam2811
     name: ainovel-cli

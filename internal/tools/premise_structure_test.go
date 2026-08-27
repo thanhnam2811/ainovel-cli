@@ -119,3 +119,104 @@ func TestPremiseStructureShortAcceptsLegacyHeadingAlias(t *testing.T) {
 		t.Fatalf("expected short template_ready, got %+v", structure)
 	}
 }
+
+func TestPremiseStructureAcceptsVietnameseLongHeadings(t *testing.T) {
+	premise := `# Tiền đề câu chuyện
+
+## Thể loại và sắc thái
+Fantasy chính trị, nhịp căng.
+
+## Định vị thể loại — độc giả mục tiêu và giá trị cốt lõi
+Dành cho độc giả thích đấu trí và phát triển nhân vật dài hạn.
+
+## Xung đột cốt lõi
+Main phải chọn giữa quyền lực và lòng trung thành.
+
+## Mục tiêu nhân vật chính
+Giữ thành phố không rơi vào nội chiến.
+
+## Hướng kết cục
+Đối diện cái giá của quyền lực.
+
+## Vùng cấm khi viết
+Không giải quyết xung đột bằng deus ex machina.
+
+## Điểm bán khác biệt
+Quyền lực luôn đi kèm một mất mát có thể truy vết.
+
+## Hook khác biệt
+Mỗi thắng lợi chính trị tạo ra một món nợ mới.
+
+## Lời hứa cốt lõi
+Đấu trí có hậu quả và quan hệ thay đổi thật.
+
+## Story engine
+Mâu thuẫn phe phái và lựa chọn cá nhân liên tục tạo biến cố.
+
+## Tuyến quan hệ / trưởng thành
+Các đồng minh dần trở thành đối trọng về giá trị.
+
+## Lộ trình tăng tiến
+Từ sinh tồn sang điều phối phe phái rồi gánh trách nhiệm hệ thống.
+
+## Chuyển hướng giữa truyện
+Cách thắng ở đầu truyện trở thành nguyên nhân gây khủng hoảng mới.
+
+## Mệnh đề kết cục
+Quyền lực có còn đáng giữ khi nó làm biến dạng người nắm giữ hay không?
+`
+
+	structure := premiseStructure(premise, domain.PlanningTierLong)
+	if ready, _ := structure["template_ready"].(bool); !ready {
+		t.Fatalf("expected Vietnamese long premise template_ready, got %+v", structure)
+	}
+	if count, _ := structure["section_count"].(int); count != 14 {
+		t.Fatalf("expected 14 recognized Vietnamese sections, got %+v", structure)
+	}
+}
+
+func TestPremiseStructureAcceptsVietnameseShortHeadings(t *testing.T) {
+	premise := `# Tiền đề câu chuyện
+
+## Thể loại và sắc thái
+Thriller một tập.
+
+## Định vị thể loại
+Độc giả thích áp lực thời gian.
+
+## Xung đột cốt lõi
+Cứu con tin trước bình minh.
+
+## Mục tiêu nhân vật chính
+Đưa con tin ra ngoài an toàn.
+
+## Hướng kết cục
+Hoàn thành nhiệm vụ nhưng phải trả giá.
+
+## Vùng cấm khi viết
+Không mở thêm tuyến dài hạn.
+
+## Điểm bán khác biệt
+Mỗi lựa chọn làm thay đổi thời gian còn lại.
+
+## Hook khác biệt
+Thông tin mới luôn ép nhân vật đổi kế hoạch.
+
+## Lời hứa cốt lõi
+Căng thẳng, lựa chọn và hậu quả.
+
+## Tính phù hợp với truyện ngắn
+Một mục tiêu, một đêm, một character arc khép kín.
+`
+
+	structure := premiseStructure(premise, domain.PlanningTierShort)
+	if ready, _ := structure["template_ready"].(bool); !ready {
+		t.Fatalf("expected Vietnamese short premise template_ready, got %+v", structure)
+	}
+}
+
+func TestCanonicalPremiseHeadingDoesNotAcceptArbitraryPrefix(t *testing.T) {
+	if heading, ok := canonicalPremiseHeading("## Story engine phụ"); ok {
+		t.Fatalf("unexpected prefix match: %q", heading)
+	}
+}
