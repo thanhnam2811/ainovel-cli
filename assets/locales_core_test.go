@@ -13,7 +13,7 @@ func TestVietnameseCoreAgentPromptsPreserveProtocol(t *testing.T) {
 
 	assertPromptTokens(t, "architect-short", b.Prompts.ArchitectShort,
 		"save_book", "save_foundation", "revise_outline", "audit_foundation",
-		"foundation_ready", "remaining", `type=\"outline\"`,
+		"foundation_ready", "remaining", `type="outline"`,
 	)
 	assertPromptTokens(t, "architect-long", b.Prompts.ArchitectLong,
 		"save_book", "save_foundation", "revise_outline", "audit_foundation",
