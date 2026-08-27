@@ -15,7 +15,7 @@ grep -Fq 'name: ainovel-cli' .goreleaser.yml \
 grep -Fq 'REPO="thanhnam2811/ainovel-cli"' scripts/install.sh \
     || fail 'installer must download releases from thanhnam2811/ainovel-cli'
 
-grep -Fq 'updateRepo = "thanhnam2811/ainovel-cli"' cmd/ainovel-cli/main.go \
+grep -Eq 'Repo:[[:space:]]*"thanhnam2811/ainovel-cli"' cmd/ainovel-cli/main.go \
     || fail 'self-update must query thanhnam2811/ainovel-cli'
 
 if grep -Fq 'ghcr.io/voocel/ainovel-cli' docker-compose.yml; then
