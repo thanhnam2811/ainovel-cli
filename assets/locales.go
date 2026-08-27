@@ -4,6 +4,8 @@ import (
 	"embed"
 	"fmt"
 	"strings"
+
+	"github.com/voocel/ainovel-cli/internal/tools"
 )
 
 // localeFS contains downstream localization overlays. Keeping translations under
