@@ -20,7 +20,7 @@ else
 fi
 
 if [ -z "$COMMITS" ]; then
-    echo "No commits found in range ${RANGE}"
+    echo "Không tìm thấy commit trong phạm vi ${RANGE}"
     exit 0
 fi
 
@@ -28,20 +28,20 @@ TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 cat > "$TMPDIR/prompt.txt" <<PROMPT_EOF
-你是 Go 命令行工具 ainovel-cli（一款 AI 小说写作引擎）的发布说明撰写者。
-请根据下面的 Git 提交记录，生成简洁、清晰、面向用户的中文 Markdown 发布说明。
+Bạn là người viết release notes cho ainovel-cli, một CLI/engine sáng tác tiểu thuyết bằng AI.
+Hãy dựa trên danh sách Git commit bên dưới để tạo release notes Markdown ngắn gọn, rõ ràng và hướng tới người dùng bằng tiếng Việt.
 
-规则：
-- 使用中文输出
-- 按以下分组组织内容：新功能、问题修复、性能优化、重构、其他；没有内容的分组不要输出
-- 每条内容一行，保持简洁，不要包含 commit hash 或作者名
-- 移除 conventional commit 前缀，例如 feat:、fix:、perf:、refactor: 等
-- 合并相近或重复的提交，避免逐条机械复述 commit
-- 使用面向用户的表达，突出实际变化和影响
-- 重点关注用户可感知的变化，例如发布流程、二进制打包、CLI/TUI 行为、写作流程、模型支持和文档
-- 只输出 Markdown 内容，不要输出开场白、解释或总结
+Quy tắc:
+- Chỉ dùng tiếng Việt cho phần diễn giải tự nhiên.
+- Nhóm nội dung theo: Tính năng mới, Sửa lỗi, Hiệu năng, Refactor, Khác; bỏ nhóm không có nội dung.
+- Mỗi thay đổi một dòng ngắn gọn; không ghi commit hash hoặc tên tác giả.
+- Bỏ conventional-commit prefix như feat:, fix:, perf:, refactor:.
+- Gộp các commit gần nghĩa hoặc trùng nhau; không chép máy từng commit.
+- Nhấn mạnh tác động người dùng nhìn thấy: CLI/TUI, luồng sáng tác, model/provider, import/revision/eval, localization, release và tài liệu.
+- Giữ nguyên tên tool, field, enum, command và identifier kỹ thuật khi cần nhắc tới.
+- Chỉ xuất Markdown, không có lời mở đầu hay phần giải thích ngoài release notes.
 
-提交记录（${RANGE}）：
+Commit (${RANGE}):
 ${COMMITS}
 PROMPT_EOF
 
@@ -52,7 +52,7 @@ build_body() { jq -Rs "$1" < "$TMPDIR/prompt.txt" > "$TMPDIR/body.json"; }
 extract() { python3 -c "import json,sys; d=json.load(open('$TMPDIR/result.json')); print($1)"; }
 
 fallback() {
-    echo "## What's Changed"
+    echo "## Thay đổi"
     echo ""
     echo "$COMMITS"
 }
