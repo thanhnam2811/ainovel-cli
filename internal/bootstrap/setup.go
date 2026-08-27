@@ -77,29 +77,29 @@ func ProviderPresets() []ProviderPreset {
 }
 
 type setupCopy struct {
-	noConfig             string
-	configPath           string
-	advancedSettings     string
-	providerTitle        string
-	providerName         string
-	apiKeyOptional       string
-	apiKeyOptionalHint   string
-	apiKeyRequired       string
-	notSet               string
-	baseURLTitle         string
-	baseURLDefaultHint   string
-	defaultValue         string
-	modelTitle           string
-	modelExample         string
-	savedTo              string
-	defaultModel         string
-	roleModelsHint       string
-	globalRulesHint      string
-	apiProtocolTitle     string
-	compatibleSuffix     string
-	selectHelp           string
-	inputHelp            string
-	cancelled            string
+	noConfig           string
+	configPath         string
+	advancedSettings   string
+	providerTitle      string
+	providerName       string
+	apiKeyOptional     string
+	apiKeyOptionalHint string
+	apiKeyRequired     string
+	notSet             string
+	baseURLTitle       string
+	baseURLDefaultHint string
+	defaultValue       string
+	modelTitle         string
+	modelExample       string
+	savedTo            string
+	defaultModel       string
+	roleModelsHint     string
+	globalRulesHint    string
+	apiProtocolTitle   string
+	compatibleSuffix   string
+	selectHelp         string
+	inputHelp          string
+	cancelled          string
 }
 
 var viSetupCopy = setupCopy{
