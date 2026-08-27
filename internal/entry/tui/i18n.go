@@ -19,6 +19,31 @@ func localizedCommandDescription(name, upstream string) string {
 	return upstream
 }
 
+func localizedStatusLabel(status, upstream string) string {
+	if !localization.IsVietnamese() {
+		return upstream
+	}
+	if translated, ok := vietnameseStatusLabels[status]; ok {
+		return translated
+	}
+	return upstream
+}
+
+var vietnameseStatusLabels = map[string]string{
+	"READY":      "sẵn sàng",
+	"RUNNING":    "đang chạy",
+	"PAUSED":     "đã tạm dừng",
+	"PAUSING":    "đang tạm dừng",
+	"COMPLETED":  "hoàn tất",
+	"ERROR":      "lỗi",
+	"REVIEW":     "đang duyệt",
+	"REWRITING":  "đang viết lại",
+	"POLISHING":  "đang biên tập",
+	"STEERING":   "đang can thiệp",
+	"IMPORTING":  "đang nhập",
+	"SIMULATING": "đang mô phỏng",
+}
+
 var vietnameseCommandDescriptions = map[string]string{
 	"help":      "Xem danh sách lệnh",
 	"model":     "Chuyển model và mức suy luận cho từng vai trò",
