@@ -14,6 +14,7 @@ func (r commandRegistry) Visible() []slashCommandSpec {
 	var out []slashCommandSpec
 	for _, spec := range r.specs {
 		if !spec.Hidden {
+			spec.Description = localizedCommandDescription(spec.Name, spec.Description)
 			out = append(out, spec)
 		}
 	}
@@ -27,6 +28,7 @@ func (r commandRegistry) Find(name string) (slashCommandSpec, bool) {
 	}
 	for _, spec := range r.specs {
 		if spec.matches(name) {
+			spec.Description = localizedCommandDescription(spec.Name, spec.Description)
 			return spec, true
 		}
 	}
