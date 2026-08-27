@@ -46,7 +46,8 @@ func TestEvalVariantRemainsFinalPromptLayer(t *testing.T) {
 	if err := applyVariant(&bundle, map[string]string{"writer.md": variant}); err != nil {
 		t.Fatal(err)
 	}
-	if bundle.Prompts.Writer != variant {
-		t.Fatalf("variant must override localized baseline, got %q", bundle.Prompts.Writer)
+	want := assets.WithSimulationGuidance(variant, "writer")
+	if bundle.Prompts.Writer != want {
+		t.Fatalf("variant must override localized baseline, got %q, want %q", bundle.Prompts.Writer, want)
 	}
 }
