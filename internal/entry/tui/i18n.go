@@ -29,6 +29,38 @@ func localizedStatusLabel(status, upstream string) string {
 	return upstream
 }
 
+func localizedFieldLabel(upstream string) string {
+	if !localization.IsVietnamese() {
+		return upstream
+	}
+	if translated, ok := vietnameseFieldLabels[upstream]; ok {
+		return translated
+	}
+	return upstream
+}
+
+var vietnameseFieldLabels = map[string]string{
+	"运行态": "Trạng thái",
+	"阶段":   "Giai đoạn",
+	"流程":   "Luồng",
+	"推进":   "Tiến hành",
+	"已完成":  "Đã xong",
+	"已规划":  "Đã lên kế hoạch",
+	"进度":   "Tiến độ",
+	"字数":   "Số từ",
+	"当前":   "Hiện tại",
+	"待恢复":  "Chờ khôi phục",
+	"队列":   "Hàng đợi",
+	"原因":   "Lý do",
+	"待处理":  "Chờ xử lý",
+	"等待":   "Đang chờ",
+	"输入":   "Input",
+	"输出":   "Output",
+	"费用":   "Chi phí",
+	"节省":   "Tiết kiệm",
+	"预算":   "Ngân sách",
+}
+
 var vietnameseStatusLabels = map[string]string{
 	"READY":      "sẵn sàng",
 	"RUNNING":    "đang chạy",
