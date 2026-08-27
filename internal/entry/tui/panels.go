@@ -8,12 +8,10 @@ import (
 	"github.com/voocel/ainovel-cli/internal/host"
 )
 
-// renderTopBar 渲染顶部状态栏。
-// 左侧：provider/model，中间：书名，右侧：状态胶囊。
 func renderTopBar(snap host.UISnapshot, width int, spinnerFrame, version string) string {
 	bookTitle := snap.BookTitle
 	if bookTitle == "" {
-		bookTitle = "未定书名"
+		bookTitle = uiText("未定书名", "Chưa đặt tên")
 	}
 
 	var infoParts []string
@@ -56,9 +54,9 @@ func renderTopBar(snap host.UISnapshot, width int, spinnerFrame, version string)
 	}
 	var status string
 	if icon != "" {
-		status = statusIconStyle.Foreground(color).Render(icon) + " " + statusLabelStyle.Render(disp.label)
+		status = statusIconStyle.Foreground(color).Render(icon) + " " + statusLabelStyle.Render(localizedStatusLabel(label, disp.label))
 	} else {
-		status = statusLabelStyle.Render(disp.label)
+		status = statusLabelStyle.Render(localizedStatusLabel(label, disp.label))
 	}
 
 	innerW := max(12, width-2)
@@ -75,44 +73,21 @@ func renderTopBar(snap host.UISnapshot, width int, spinnerFrame, version string)
 	leftW := sideTotal / 2
 	rightW := innerW - centerW - leftW
 
-	leftCell := lipgloss.NewStyle().
-		Width(leftW).
-		AlignHorizontal(lipgloss.Left).
-		Foreground(colorDim).
-		Render(truncate(leftText, leftW))
-	centerCell := lipgloss.NewStyle().
-		Width(centerW).
-		AlignHorizontal(lipgloss.Center).
-		Bold(true).
-		Foreground(bodyTextColor).
-		Render(titleText)
-	rightCell := lipgloss.NewStyle().
-		Width(rightW).
-		AlignHorizontal(lipgloss.Right).
-		Render(status)
+	leftCell := lipgloss.NewStyle().Width(leftW).AlignHorizontal(lipgloss.Left).Foreground(colorDim).Render(truncate(leftText, leftW))
+	centerCell := lipgloss.NewStyle().Width(centerW).AlignHorizontal(lipgloss.Center).Bold(true).Foreground(bodyTextColor).Render(titleText)
+	rightCell := lipgloss.NewStyle().Width(rightW).AlignHorizontal(lipgloss.Right).Render(status)
 
 	content := leftCell + centerCell + rightCell
-	return topBarStyle.Width(width).
-		Border(baseBorder, false, false, true, false).
-		BorderForeground(colorDim).
-		Render(content)
+	return topBarStyle.Width(width).Border(baseBorder, false, false, true, false).BorderForeground(colorDim).Render(content)
 }
 
-// renderStatePanel 把状态侧栏内容(已在 stateVP 中)包进左侧带右边框的盒子。
-// 与 renderDetailPanel 对称：内容由 renderStateContent 生成并喂进 viewport，这里只负责框。
-// MaxHeight 钳高，防止窗口缩小时溢出比右栏高（见 panels_test.go 的高度契约）。
 func renderStatePanel(vp viewport.Model, width, height int, focused bool) string {
 	borderColor := colorDim
 	if focused {
 		borderColor = colorAccent
 	}
-	style := lipgloss.NewStyle().
-		Width(width).
-		Height(height).
-		MaxHeight(height).
-		Border(baseBorder, false, true, false, false).
-		BorderForeground(borderColor).
-		Padding(1, 1, 0, 1)
+	style := lipgloss.NewStyle().Width(width).Height(height).MaxHeight(height).
+		Border(baseBorder, false, true, false, false).BorderForeground(borderColor).Padding(1, 1, 0, 1)
 	return style.Render(vp.View())
 }
 
@@ -123,76 +98,49 @@ func max(a, b int) int {
 	return b
 }
 
-// renderDetailPanel 渲染右侧可滚动详情面板。
 func renderDetailPanel(vp viewport.Model, width, height int, focused bool) string {
 	borderColor := colorDim
 	if focused {
 		borderColor = colorAccent
 	}
-	style := lipgloss.NewStyle().
-		Width(width).
-		Height(height).
-		MaxHeight(height).
-		Border(baseBorder, false, false, false, true).
-		BorderForeground(borderColor).
-		Padding(0, 1)
-
+	style := lipgloss.NewStyle().Width(width).Height(height).MaxHeight(height).
+		Border(baseBorder, false, false, false, true).BorderForeground(borderColor).Padding(0, 1)
 	return style.Render(vp.View())
 }
 
-// renderWelcome 渲染新建态首屏。
 func renderWelcome(width, height int, errMsg string, mode startupMode, importHint string) string {
-	// 简洁标题
-	title := lipgloss.NewStyle().
-		Foreground(colorAccent).
-		Bold(true).
-		Render("A I N O V E L")
+	title := lipgloss.NewStyle().Foreground(colorAccent).Bold(true).Render("A I N O V E L")
+	subtitle := lipgloss.NewStyle().Foreground(colorMuted).Italic(true).Render("AI-Powered Novel Creation Engine")
 
-	// 副标题
-	subtitle := lipgloss.NewStyle().
-		Foreground(colorMuted).
-		Italic(true).
-		Render("AI-Powered Novel Creation Engine")
-
-	// 分隔线
 	divW := 44
 	if divW > width-8 {
 		divW = width - 8
 	}
-	divider := lipgloss.NewStyle().Foreground(colorDim).
-		Render(strings.Repeat("~", divW))
+	divider := lipgloss.NewStyle().Foreground(colorDim).Render(strings.Repeat("~", divW))
 
-	// 功能亮点
 	features := []struct{ icon, label, desc string }{
-		{">>", "多模型协作", "Architect 规划 / Writer 创作 / Editor 审阅"},
-		{"::", "断点恢复", "崩溃或中断后从上次进度自动续写"},
-		{"<>", "实时干预", "创作过程中随时调整剧情走向"},
-		{"##", "分层长篇", "支持卷-弧-章分层结构的长篇创作"},
+		{">>", uiText("多模型协作", "Phối hợp đa model"), uiText("Architect 规划 / Writer 创作 / Editor 审阅", "Architect lập kế hoạch / Writer sáng tác / Editor biên tập")},
+		{"::", uiText("断点恢复", "Khôi phục tiến trình"), uiText("崩溃或中断后从上次进度自动续写", "Tự tiếp tục từ tiến độ gần nhất sau khi lỗi hoặc gián đoạn")},
+		{"<>", uiText("实时干预", "Can thiệp thời gian thực"), uiText("创作过程中随时调整剧情走向", "Điều chỉnh hướng cốt truyện bất cứ lúc nào khi đang sáng tác")},
+		{"##", uiText("分层长篇", "Truyện dài phân tầng"), uiText("支持卷-弧-章分层结构的长篇创作", "Hỗ trợ cấu trúc Tập - Arc - Chương cho truyện dài")},
 	}
 	iconStyle := lipgloss.NewStyle().Foreground(colorAccent2).Bold(true)
 	featLabelStyle := lipgloss.NewStyle().Foreground(bodyTextColor)
 	descStyle := lipgloss.NewStyle().Foreground(colorDim)
 	var featLines []string
 	for _, f := range features {
-		line := iconStyle.Render(f.icon) + " " +
-			featLabelStyle.Render(f.label) + "  " +
-			descStyle.Render(f.desc)
+		line := iconStyle.Render(f.icon) + " " + featLabelStyle.Render(f.label) + "  " + descStyle.Render(f.desc)
 		featLines = append(featLines, line)
 	}
 	feats := strings.Join(featLines, "\n")
 
-	// 输入提示
-	prompt := lipgloss.NewStyle().Foreground(bodyTextColor).Render("在下方输入你的小说需求开始创作")
+	prompt := lipgloss.NewStyle().Foreground(bodyTextColor).Render(uiText("在下方输入你的小说需求开始创作", "Nhập yêu cầu về truyện ở bên dưới để bắt đầu sáng tác"))
+	modeLine := lipgloss.NewStyle().Foreground(colorMuted).Render(uiText("当前模式：", "Chế độ hiện tại: ") + mode.label() + " · " + mode.subtitle())
 
-	modeLine := lipgloss.NewStyle().
-		Foreground(colorMuted).
-		Render("当前模式：" + mode.label() + " · " + mode.subtitle())
-
-	// 示例
 	examples := []string{
-		"写一部 12 章都市悬疑小说，主角是一名女法医",
-		"创作一部仙侠长篇，主角从凡人修炼至飞升",
-		"写一个科幻短篇，讲述 AI 觉醒后的伦理困境",
+		uiText("写一部 12 章都市悬疑小说，主角是一名女法医", "Viết tiểu thuyết trinh thám đô thị 12 chương, nhân vật chính là nữ pháp y"),
+		uiText("创作一部仙侠长篇，主角从凡人修炼至飞升", "Viết truyện tiên hiệp dài, nhân vật chính tu luyện từ phàm nhân đến phi thăng"),
+		uiText("写一个科幻短篇，讲述 AI 觉醒后的伦理困境", "Viết truyện khoa học viễn tưởng ngắn về những vấn đề đạo đức sau khi AI thức tỉnh"),
 	}
 	exStyle := lipgloss.NewStyle().Foreground(colorAccent)
 	dotStyle := lipgloss.NewStyle().Foreground(colorDim)
@@ -202,7 +150,6 @@ func renderWelcome(width, height int, errMsg string, mode startupMode, importHin
 	}
 	exBlock := strings.Join(exLines, "\n")
 
-	// 组装
 	var b strings.Builder
 	b.WriteString("\n")
 	b.WriteString(title)
@@ -222,26 +169,23 @@ func renderWelcome(width, height int, errMsg string, mode startupMode, importHin
 	b.WriteString(exBlock)
 	b.WriteString("\n\n")
 	if importHint != "" {
-		// 这本书停在导入半路：显著提示恢复入口，替代常规导入提示。
-		b.WriteString(lipgloss.NewStyle().Foreground(colorAccent2).Bold(true).
-			Render("! " + importHint))
+		b.WriteString(lipgloss.NewStyle().Foreground(colorAccent2).Bold(true).Render("! " + importHint))
 	} else {
-		b.WriteString(lipgloss.NewStyle().Foreground(colorDim).
-			Render("已有设定/大纲？/start <文件路径> 创建新书 · 已有小说存稿？/import <文件路径> 导入续写"))
+		b.WriteString(lipgloss.NewStyle().Foreground(colorDim).Render(uiText(
+			"已有设定/大纲？/start <文件路径> 创建新书 · 已有小说存稿？/import <文件路径> 导入续写",
+			"Có thiết lập/dàn ý? dùng /start <đường-dẫn-tệp> · Có bản thảo? dùng /import <đường-dẫn-tệp> để nhập và viết tiếp",
+		)))
 	}
 	b.WriteString("\n\n")
-	b.WriteString(lipgloss.NewStyle().Foreground(colorDim).Italic(true).
-		Render("Tab 切换模式 · 快速开始下 Enter 直接创作 · 共创规划下 Enter 进入对话"))
+	b.WriteString(lipgloss.NewStyle().Foreground(colorDim).Italic(true).Render(uiText(
+		"Tab 切换模式 · 快速开始下 Enter 直接创作 · 共创规划下 Enter 进入对话",
+		"Tab đổi chế độ · Enter để bắt đầu nhanh · Ở chế độ cùng lập kế hoạch, Enter để vào hội thoại",
+	)))
 
 	if errMsg != "" {
 		b.WriteString("\n\n")
 		b.WriteString(lipgloss.NewStyle().Foreground(colorError).Bold(true).Render("! " + errMsg))
 	}
 
-	return lipgloss.NewStyle().
-		Width(width).
-		Height(height).
-		AlignHorizontal(lipgloss.Center).
-		AlignVertical(lipgloss.Center).
-		Render(b.String())
+	return lipgloss.NewStyle().Width(width).Height(height).AlignHorizontal(lipgloss.Center).AlignVertical(lipgloss.Center).Render(b.String())
 }
