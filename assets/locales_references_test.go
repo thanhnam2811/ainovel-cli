@@ -25,7 +25,7 @@ func TestVietnameseReferencePackIsLocalized(t *testing.T) {
 		{"consistency", b.References.Consistency, []string{"# Cơ chế bảo đảm continuity", "novel_context"}},
 		{"content-expansion", b.References.ContentExpansion, []string{"# Kỹ thuật mở rộng nội dung", "user_rules.preferences"}},
 		{"dialogue-writing", b.References.DialogueWriting, []string{"# Quy chuẩn viết hội thoại", "Dấu câu và format tiếng Việt", "Subtext"}},
-		{"longform-planning", b.References.LongformPlanning, []string{"# Tham chiếu quy hoạch truyện dài", "Story engine", "estimated_chapters"}},
+		{"longform-planning", b.References.LongformPlanning, []string{"# Tham chiếu quy hoạch truyện dài", "story engine", "estimated_chapters"}},
 		{"differentiation", b.References.Differentiation, []string{"# Tham chiếu thiết kế khác biệt hóa", "Năm chiều khác biệt hóa"}},
 		{"anti-ai-tone", b.References.AntiAITone, []string{"# Tiêu chí giảm"}},
 	}
