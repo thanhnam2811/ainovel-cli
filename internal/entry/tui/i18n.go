@@ -44,8 +44,6 @@ func localizedFieldLabel(upstream string) string {
 	return upstream
 }
 
-// localizedTeaModel is the final TUI boundary. It only rewrites known chrome
-// phrases and exact styled UI tokens; arbitrary story/model text is left alone.
 type localizedTeaModel struct {
 	inner tea.Model
 }
@@ -76,8 +74,6 @@ func localizeRenderedTUI(view string) string {
 		return view
 	}
 
-	// Long, fixed chrome phrases are safe to replace as plain text. Avoid short
-	// generic Chinese tokens here because novel content can legitimately contain them.
 	plain := []string{
 		"加载中...", "Đang tải...",
 		"终端宽度不足，请至少扩展到 100 列", "Terminal quá hẹp, hãy mở rộng tối thiểu 100 cột",
@@ -114,11 +110,22 @@ func localizeRenderedTUI(view string) string {
 		"输入 / 搜索命令 · Enter 继续创作 · Esc 清空输入", "Nhập / để tìm lệnh · Enter tiếp tục sáng tác · Esc xóa input",
 		"输入 / 搜索命令 · 点击/Tab 切换面板 · ↑↓ 滚动 · End 跳底 · Ctrl+L 清屏 · Esc 暂停 · Enter 发送", "Nhập / để tìm lệnh · click/Tab đổi panel · ↑↓ cuộn · End xuống cuối · Ctrl+L xóa màn hình · Esc tạm dừng · Enter gửi",
 		"Press Ctrl+C again to exit", "Nhấn Ctrl+C lần nữa để thoát",
+		"+ 新增 Provider…", "+ Thêm Provider…",
+		"Provider 名称", "Tên Provider",
+		"输入 API Key", "Nhập API Key",
+		"输入新 Key，留空保留", "Nhập Key mới; để trống để giữ nguyên",
+		"留空使用默认地址", "Để trống để dùng địa chỉ mặc định",
+		"该 Provider 必须配置 API Key", "Provider này bắt buộc phải có API Key",
+		"模型 ID", "Model ID",
+		"请先添加模型", "Hãy thêm model trước",
+		"测试连接", "Kiểm tra kết nối",
+		"保存配置", "Lưu cấu hình",
+		"默认地址", "Địa chỉ mặc định",
+		"已清除", "Đã xóa",
+		"未设置", "Chưa đặt",
 	}
 	view = strings.NewReplacer(plain...).Replace(view)
 
-	// Short labels are replaced only in their exact rendered UI style so the
-	// same Chinese words inside story text are never touched.
 	for upstream, vietnamese := range vietnameseSectionTitles {
 		view = strings.ReplaceAll(view, panelTitleStyle.Render(upstream), panelTitleStyle.Render(vietnamese))
 	}
@@ -140,44 +147,44 @@ var vietnameseSectionTitles = map[string]string{
 }
 
 var vietnameseFieldValues = map[string]string{
-	"前提":  "Tiền đề",
-	"大纲":  "Dàn ý",
-	"写作":  "Sáng tác",
-	"完成":  "Hoàn tất",
-	"初始化": "Khởi tạo",
-	"运行中": "Đang chạy",
-	"暂停中": "Đang tạm dừng",
-	"已暂停": "Đã tạm dừng",
-	"已完成": "Đã hoàn tất",
-	"空闲":  "Rảnh",
-	"评审":  "Đánh giá",
-	"重写":  "Viết lại",
-	"打磨":  "Biên tập",
-	"干预":  "Can thiệp",
+	"前提":   "Tiền đề",
+	"大纲":   "Dàn ý",
+	"写作":   "Sáng tác",
+	"完成":   "Hoàn tất",
+	"初始化":  "Khởi tạo",
+	"运行中":  "Đang chạy",
+	"暂停中":  "Đang tạm dừng",
+	"已暂停":  "Đã tạm dừng",
+	"已完成":  "Đã hoàn tất",
+	"空闲":   "Rảnh",
+	"评审":   "Đánh giá",
+	"重写":   "Viết lại",
+	"打磨":   "Biên tập",
+	"干预":   "Can thiệp",
 	"逐章验收": "Duyệt từng chương",
-	"自动":  "Tự động",
+	"自动":   "Tự động",
 }
 
 var vietnameseFieldLabels = map[string]string{
 	"运行态": "Trạng thái",
-	"阶段":   "Giai đoạn",
-	"流程":   "Luồng",
-	"推进":   "Tiến hành",
-	"已完成":  "Đã xong",
-	"已规划":  "Đã lên kế hoạch",
-	"进度":   "Tiến độ",
-	"字数":   "Số từ",
-	"当前":   "Hiện tại",
-	"待恢复":  "Chờ khôi phục",
-	"队列":   "Hàng đợi",
-	"原因":   "Lý do",
-	"待处理":  "Chờ xử lý",
-	"等待":   "Đang chờ",
-	"输入":   "Input",
-	"输出":   "Output",
-	"费用":   "Chi phí",
-	"节省":   "Tiết kiệm",
-	"预算":   "Ngân sách",
+	"阶段":  "Giai đoạn",
+	"流程":  "Luồng",
+	"推进":  "Tiến hành",
+	"已完成": "Đã xong",
+	"已规划": "Đã lên kế hoạch",
+	"进度":  "Tiến độ",
+	"字数":  "Số từ",
+	"当前":  "Hiện tại",
+	"待恢复": "Chờ khôi phục",
+	"队列":  "Hàng đợi",
+	"原因":  "Lý do",
+	"待处理": "Chờ xử lý",
+	"等待":  "Đang chờ",
+	"输入":  "Input",
+	"输出":  "Output",
+	"费用":  "Chi phí",
+	"节省":  "Tiết kiệm",
+	"预算":  "Ngân sách",
 }
 
 var vietnameseStatusLabels = map[string]string{
