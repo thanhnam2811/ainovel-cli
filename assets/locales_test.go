@@ -1,6 +1,8 @@
 package assets
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -37,6 +39,33 @@ func TestApplyLocaleVietnamese(t *testing.T) {
 	}
 }
 
+func TestApplyLocalePreservesStyleOverridePrecedence(t *testing.T) {
+	home := t.TempDir()
+	book := t.TempDir()
+	mustWriteTestFile(t, filepath.Join(home, "voice.md"), "GLOBAL VOICE")
+	mustWriteTestFile(t, filepath.Join(book, "voice.md"), "BOOK VOICE")
+	mustWriteTestFile(t, filepath.Join(home, "anti-ai-tone.md"), "GLOBAL ANTI AI")
+	mustWriteTestFile(t, filepath.Join(book, "anti-ai-tone.md"), "BOOK ANTI AI")
+	mustWriteTestFile(t, filepath.Join(home, "styles", "default.md"), "GLOBAL STYLE")
+	mustWriteTestFile(t, filepath.Join(book, "styles", "default.md"), "BOOK STYLE")
+
+	opts := LoadOptions{HomeStyleDir: home, BookStyleDir: book}
+	b := Load("default", opts)
+	if err := ApplyLocale(&b, "vi", opts); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.HasPrefix(b.Voice, "## Tiêu chuẩn viết") || !strings.Contains(b.Voice, "GLOBAL VOICE") || !strings.Contains(b.Voice, "BOOK VOICE") {
+		t.Fatalf("voice precedence was not preserved: %q", b.Voice)
+	}
+	if !strings.HasPrefix(b.References.AntiAITone, "# Tiêu chí giảm") || !strings.Contains(b.References.AntiAITone, "GLOBAL ANTI AI") || !strings.Contains(b.References.AntiAITone, "BOOK ANTI AI") {
+		t.Fatalf("anti-AI precedence was not preserved: %q", b.References.AntiAITone)
+	}
+	if got := strings.TrimSpace(b.Styles["default"]); got != "BOOK STYLE" {
+		t.Fatalf("book style must win, got %q", got)
+	}
+}
+
 func TestApplyLocaleUpstreamModeIsNoOp(t *testing.T) {
 	b := Load("default", LoadOptions{})
 	beforeWriter := b.Prompts.Writer
@@ -68,5 +97,15 @@ func TestApplyLocaleVietnameseIsIdempotent(t *testing.T) {
 	}
 	if b.Prompts.ImportSegment != first {
 		t.Fatal("applying Vietnamese locale twice changed a fallback prompt")
+	}
+}
+
+func mustWriteTestFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
