@@ -28,10 +28,17 @@ Khi novel_context chứa simulation_profile trong planning_memory hoặc working
 Chỉ học cấu trúc, nhịp, cách đặt móc, mật độ thông tin và kỹ thuật giữ người đọc. Không sao chép câu chữ, nhân vật, địa danh, thiết lập riêng hoặc tình tiết cố định của nguồn tham chiếu. Nếu simulation_profile xung đột với yêu cầu trực tiếp của người dùng, ưu tiên yêu cầu của người dùng.`
 
 // ApplyLocale overlays localized writing assets onto an already loaded upstream
-// bundle. Missing localized files intentionally keep the latest upstream asset.
-// When LoadOptions is provided, localized built-ins keep the exact same override
-// precedence as upstream: localized builtin < ~/.ainovel/style < <book>/style.
+// bundle. It stays style-agnostic for existing callers; production startup should
+// use ApplyLocaleForStyle so genre-specific references can also be localized.
 func ApplyLocale(b *Bundle, locale string, loadOpts ...LoadOptions) error {
+	return ApplyLocaleForStyle(b, locale, "", loadOpts...)
+}
+
+// ApplyLocaleForStyle overlays localized assets while preserving the selected
+// upstream style/genre. Missing localized files keep the newest upstream asset.
+// When LoadOptions is provided, localized built-ins keep upstream precedence:
+// localized builtin < ~/.ainovel/style < <book>/style.
+func ApplyLocaleForStyle(b *Bundle, locale, style string, loadOpts ...LoadOptions) error {
 	if b == nil {
 		return fmt.Errorf("assets: nil bundle")
 	}
@@ -45,7 +52,7 @@ func ApplyLocale(b *Bundle, locale string, loadOpts ...LoadOptions) error {
 	case "":
 		return nil
 	case "vi":
-		applyVietnameseLocale(b, opts)
+		applyVietnameseLocale(b, opts, style)
 		return nil
 	default:
 		return fmt.Errorf("assets: unsupported locale %q (supported: vi, zh)", locale)
@@ -65,7 +72,7 @@ func normalizeLocale(locale string) string {
 	}
 }
 
-func applyVietnameseLocale(b *Bundle, opts LoadOptions) {
+func applyVietnameseLocale(b *Bundle, opts LoadOptions, style string) {
 	// Core prompts may be translated independently. A missing file keeps the
 	// latest upstream prompt, so protocol changes arrive immediately on sync.
 	b.Prompts.ArchitectShort = localizedCorePrompt("vi", "architect-short.md", b.Prompts.ArchitectShort)
@@ -73,8 +80,6 @@ func applyVietnameseLocale(b *Bundle, opts LoadOptions) {
 	b.Prompts.Writer = localizedCorePrompt("vi", "writer.md", b.Prompts.Writer)
 	b.Prompts.Editor = localizedCorePrompt("vi", "editor.md", b.Prompts.Editor)
 
-	// Function-style prompts are still safe when untranslated: preserve the
-	// upstream contract and append only the language instruction.
 	b.Prompts.ImportSegment = localizedPrompt("vi", "import-segment.md", b.Prompts.ImportSegment)
 	b.Prompts.ImportAnalyze = localizedPrompt("vi", "import-analyze.md", b.Prompts.ImportAnalyze)
 	b.Prompts.ImportSynthesize = localizedPrompt("vi", "import-synthesize.md", b.Prompts.ImportSynthesize)
@@ -109,6 +114,7 @@ func applyVietnameseLocale(b *Bundle, opts LoadOptions) {
 	overlayStyles(b.Styles, opts.BookStyleDir)
 
 	applyLocalizedReferences(&b.References, "vi")
+	applyLocalizedGenreReferences(&b.References, "vi", style, opts)
 }
 
 func applyLocalizedReferences(refs *tools.References, locale string) {
@@ -128,6 +134,32 @@ func applyLocalizedReferences(refs *tools.References, locale string) {
 	setLocalized(&refs.Differentiation, locale, "references/differentiation.md")
 	// AntiAITone is intentionally excluded here because it has appendable user
 	// overrides and is rebuilt above with resolveAppendable.
+}
+
+func applyLocalizedGenreReferences(refs *tools.References, locale, style string, opts LoadOptions) {
+	if refs == nil {
+		return
+	}
+	style = strings.ToLower(strings.TrimSpace(style))
+	if style == "" || style == "default" || !styleNameRe.MatchString(style) {
+		return
+	}
+
+	base := "references/genres/" + style + "/"
+	if raw, ok := readLocale(locale, base+"style-references.md"); ok {
+		refs.StyleReference = raw
+		// Upstream allows user replacement of genre style references. Reapply
+		// those exact layers after the localized builtin so user intent wins.
+		rel := "genres/" + style + "/style-references.md"
+		for _, dir := range []string{opts.HomeStyleDir, opts.BookStyleDir} {
+			if override := readOverride(dir, rel); override != "" {
+				refs.StyleReference = override
+			}
+		}
+	}
+	if raw, ok := readLocale(locale, base+"arc-templates.md"); ok {
+		refs.ArcTemplates = raw
+	}
 }
 
 func setLocalized(dst *string, locale, path string) {

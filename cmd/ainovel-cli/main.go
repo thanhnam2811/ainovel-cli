@@ -114,7 +114,7 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 	if locale == "" {
 		locale = "vi"
 	}
-	if err := assets.ApplyLocale(&bundle, locale, loadOpts); err != nil {
+	if err := assets.ApplyLocaleForStyle(&bundle, locale, cfg.Style, loadOpts); err != nil {
 		die("locale: %v", err)
 	}
 	if opts.Headless {
