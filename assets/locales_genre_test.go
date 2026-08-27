@@ -9,10 +9,10 @@ import (
 
 func TestVietnameseGenrePresetsAreLocalized(t *testing.T) {
 	cases := []struct {
-		style        string
-		styleMarker  string
-		refMarker    string
-		arcMarker    string
+		style       string
+		styleMarker string
+		refMarker   string
+		arcMarker   string
 	}{
 		{"fantasy", "## Phong cách fantasy / phiêu lưu", "# Tham chiếu bổ sung — fantasy / xianxia", "## Tham chiếu arc — fantasy / xianxia"},
 		{"romance", "## Phong cách romance / tình cảm", "# Tham chiếu bổ sung — romance / tình cảm", "## Tham chiếu arc — romance / tình cảm"},
