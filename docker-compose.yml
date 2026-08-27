@@ -1,6 +1,8 @@
 services:
   ainovel:
-    image: ghcr.io/voocel/ainovel-cli:latest
+    # Keep compose local-first until this fork publishes its first GHCR image.
+    # Using the upstream ghcr.io/voocel image would silently drop Vietnamese overlays.
+    image: ainovel-cli-vi:local
     build:
       context: .
     volumes:
