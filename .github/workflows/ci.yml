@@ -29,7 +29,12 @@ jobs:
 
       - name: Format check
         shell: bash
-        run: test -z "$(gofmt -l .)"
+        run: |
+          files="$(gofmt -l .)"
+          if [ -n "$files" ]; then
+            printf 'Files needing gofmt:\n%s\n' "$files"
+            exit 1
+          fi
 
       - name: Installer and fork-boundary syntax check
         if: runner.os == 'Linux'
