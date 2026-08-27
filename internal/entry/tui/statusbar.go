@@ -52,7 +52,7 @@ func renderStatusBar(snap host.UISnapshot, outputDir string, width int) string {
 			s += dim.Render("/" + formatCostUSD(snap.BudgetLimitUSD))
 		}
 		if saved := formatCostUSD(snap.TotalSavedUSD); saved != "" {
-			s += dim.Render(uiText(" 省", " tiết kiệm ") + saved)
+			s += dim.Render(" 省" + saved)
 		}
 		segs = append(segs, s)
 	}
