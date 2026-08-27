@@ -32,7 +32,7 @@ func Run(cfg bootstrap.Config, bundle assets.Bundle, build buildversion.Info) er
 			Summary: logWarning.Error(), Detail: logWarning.Error(),
 		})
 	}
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(wrapLocalizedTUI(m), tea.WithAltScreen())
 	_, err = p.Run()
 	return err
 }
