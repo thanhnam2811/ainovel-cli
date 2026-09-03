@@ -38,6 +38,18 @@ func promptCacheBase(bookDir string) string {
 	return "nvl-" + hex.EncodeToString(sum[:6])
 }
 
+// cacheLastMessageFor keeps Anthropic-style rolling cache breakpoints away
+// from the OpenAI Responses protocol. Responses uses PromptCacheKey for cache
+// routing and cannot attach an explicit breakpoint to function_call_output;
+// doing so makes the second tool turn fail before any HTTP request is sent.
+func cacheLastMessageFor(cfg bootstrap.Config, provider string) string {
+	pc, ok := cfg.Providers[provider]
+	if ok && pc.Type == "openai" && pc.API == "responses" {
+		return ""
+	}
+	return "ephemeral"
+}
+
 // subagentMaxRetries 是所有 Worker 的 LLM retry 上限。
 // 退避策略：指数退避（受 maxDelay 上限约束），优先服从 server Retry-After。
 // 工具只在完整 Assistant 消息提交后启动，因此 stream-idle / 503 /
@@ -159,9 +171,11 @@ func BuildWorkers(
 	architectModel := models.ForRoleWithFailover("architect", reportFailover)
 	writerModel := models.ForRoleWithFailover("writer", reportFailover)
 	editorModel := models.ForRoleWithFailover("editor", reportFailover)
+	architectProvider, _, _ := models.CurrentSelection("architect")
+	writerProvider, writerModelName, _ := models.CurrentSelection("writer")
+	editorProvider, _, _ := models.CurrentSelection("editor")
 
 	// Writer 的 ContextManager 由工厂每次调用重建，窗口随模型 swap 动态跟随（见下方工厂）。
-	writerProvider, writerModelName, _ := models.CurrentSelection("writer")
 	writerContextWindow, writerSource := cfg.ResolveContextWindow(writerProvider, writerModelName)
 	bootstrap.LogContextWindowChoice("writer", writerModelName, writerContextWindow, writerSource)
 
@@ -200,7 +214,7 @@ func BuildWorkers(
 		MaxRetries:       subagentMaxRetries,
 		ThinkingLevel:    architectThinking,
 		OnMessage:        onMsg,
-		CacheLastMessage: "ephemeral",
+		CacheLastMessage: cacheLastMessageFor(cfg, architectProvider),
 		PromptCacheKey:   cacheBase + "-architect_short",
 		StopAfterToolResult: func(toolName string, result json.RawMessage) bool {
 			return foundationReadyResult(toolName, result)
@@ -217,7 +231,7 @@ func BuildWorkers(
 		MaxRetries:          subagentMaxRetries,
 		ThinkingLevel:       architectThinking,
 		OnMessage:           onMsg,
-		CacheLastMessage:    "ephemeral",
+		CacheLastMessage:    cacheLastMessageFor(cfg, architectProvider),
 		PromptCacheKey:      cacheBase + "-architect_long",
 		StopAfterToolResult: architectLongShouldStopAfterToolResult,
 		StopGuardFactory:    architectStopGuardFactory,
@@ -241,7 +255,7 @@ func BuildWorkers(
 		ThinkingLevel:    resolvedRoleThinking(writerModel, cfg, "writer"),
 		StopAfterTools:   []string{"commit_chapter"},
 		OnMessage:        onMsg,
-		CacheLastMessage: "ephemeral",
+		CacheLastMessage: cacheLastMessageFor(cfg, writerProvider),
 		PromptCacheKey:   cacheBase + "-writer",
 		StopGuardFactory: func(_, _ string) agentcore.StopGuard {
 			return guard.NewWriterStopGuard(store, onGuardBlock)
@@ -286,7 +300,7 @@ func BuildWorkers(
 		MaxRetries:       subagentMaxRetries,
 		ThinkingLevel:    resolvedRoleThinking(editorModel, cfg, "editor"),
 		OnMessage:        onMsg,
-		CacheLastMessage: "ephemeral",
+		CacheLastMessage: cacheLastMessageFor(cfg, editorProvider),
 		PromptCacheKey:   cacheBase + "-editor",
 		// 终态产物命中即停。终态退出仍会咨询 StopGuard（契约测试 TestContract_
 		// TerminalToolExitConsultsStopGuard），任务感知的 NewEditorStopGuard 负责
