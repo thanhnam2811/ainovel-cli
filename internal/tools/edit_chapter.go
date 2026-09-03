@@ -10,6 +10,7 @@ import (
 	agentcoretools "github.com/voocel/agentcore/tools"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/errs"
+	"github.com/voocel/ainovel-cli/internal/localization"
 	"github.com/voocel/ainovel-cli/internal/store"
 )
 
@@ -85,6 +86,9 @@ func (t *EditChapterTool) Execute(ctx context.Context, args json.RawMessage) (js
 	}
 	if a.OldString == a.NewString {
 		return nil, fmt.Errorf("old_string 与 new_string 相同，无需修改: %w", errs.ErrToolArgs)
+	}
+	if err := localization.RequireVietnamese("Nội dung thay thế", a.NewString); err != nil {
+		return nil, fmt.Errorf("%w: %w", err, errs.ErrToolArgs)
 	}
 	if err := t.store.Progress.ValidateChapterWork(a.Chapter); err != nil {
 		return nil, err

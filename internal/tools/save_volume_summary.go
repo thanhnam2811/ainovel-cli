@@ -43,6 +43,9 @@ func (t *SaveVolumeSummaryTool) Schema() map[string]any {
 }
 
 func (t *SaveVolumeSummaryTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {
+	if err := requireVietnameseArgs("Tóm tắt quyển", args); err != nil {
+		return nil, err
+	}
 	var a struct {
 		Volume    int      `json:"volume"`
 		Title     string   `json:"title"`

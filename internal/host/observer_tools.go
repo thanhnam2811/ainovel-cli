@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/voocel/agentcore"
+	"github.com/voocel/ainovel-cli/internal/localization"
 )
 
 // handleToolUpdate 处理 Worker 的进度中继(ProgressPayload):TOOL 行、流式正文、
@@ -179,16 +180,16 @@ func dispatchSummary(agent, task string) string {
 	if firstLine == "" {
 		return agent
 	}
-	return agent + "（" + truncate(firstLine, 30) + "）"
+	return agent + " (" + truncate(localization.ForDisplay(firstLine), 30) + ")"
 }
 
 func dispatchDetail(task, reason string) string {
 	var parts []string
 	if strings.TrimSpace(reason) != "" {
-		parts = append(parts, "派发原因: "+reason)
+		parts = append(parts, localization.Select("Lý do điều phối: ", "派发原因: ")+reason)
 	}
 	if strings.TrimSpace(task) != "" {
-		parts = append(parts, "完整任务:\n"+task)
+		parts = append(parts, localization.Select("Tác vụ đầy đủ:\n", "完整任务:\n")+task)
 	}
 	return strings.Join(parts, "\n")
 }
@@ -340,7 +341,7 @@ func displayToolName(tool string, args json.RawMessage) string {
 			Chapter int `json:"chapter"`
 		}
 		if json.Unmarshal(args, &p) == nil && p.Chapter > 0 {
-			return fmt.Sprintf("%s(第%d章)", tool, p.Chapter)
+			return fmt.Sprintf("%s(%s)", tool, localization.Select(fmt.Sprintf("chương %d", p.Chapter), fmt.Sprintf("第%d章", p.Chapter)))
 		}
 	case "save_review":
 		var p struct {
@@ -352,12 +353,12 @@ func displayToolName(tool string, args json.RawMessage) string {
 			label := ""
 			switch p.Scope {
 			case "arc":
-				label = "本弧"
+				label = localization.Select("hồi này", "本弧")
 			case "global":
-				label = "全局"
+				label = localization.Select("toàn truyện", "全局")
 			default:
 				if p.Chapter > 0 {
-					label = fmt.Sprintf("第%d章", p.Chapter)
+					label = localization.Select(fmt.Sprintf("chương %d", p.Chapter), fmt.Sprintf("第%d章", p.Chapter))
 				}
 			}
 			if label == "" {
@@ -373,7 +374,7 @@ func displayToolName(tool string, args json.RawMessage) string {
 			Chapter int `json:"chapter"`
 		}
 		if json.Unmarshal(args, &p) == nil && p.Chapter > 0 {
-			return fmt.Sprintf("%s(第%d章)", tool, p.Chapter)
+			return fmt.Sprintf("%s(%s)", tool, localization.Select(fmt.Sprintf("chương %d", p.Chapter), fmt.Sprintf("第%d章", p.Chapter)))
 		}
 	case "read_chapter":
 		var p struct {
@@ -384,11 +385,12 @@ func displayToolName(tool string, args json.RawMessage) string {
 		if json.Unmarshal(args, &p) == nil && p.Chapter > 0 {
 			suffix := ""
 			if p.Character != "" {
-				suffix = "·" + p.Character + "对话"
+				suffix = " · " + p.Character + localization.Select(" thoại", "对话")
 			} else if p.Source == "draft" {
-				suffix = "·草稿"
+				suffix = localization.Select(" · bản nháp", "·草稿")
 			}
-			return fmt.Sprintf("%s(第%d章%s)", tool, p.Chapter, suffix)
+			chapter := localization.Select(fmt.Sprintf("chương %d", p.Chapter), fmt.Sprintf("第%d章", p.Chapter))
+			return fmt.Sprintf("%s(%s%s)", tool, chapter, suffix)
 		}
 	}
 	return tool

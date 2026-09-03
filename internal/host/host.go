@@ -23,6 +23,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/host/exp"
 	"github.com/voocel/ainovel-cli/internal/host/imp"
 	"github.com/voocel/ainovel-cli/internal/host/sim"
+	"github.com/voocel/ainovel-cli/internal/localization"
 	runtimelog "github.com/voocel/ainovel-cli/internal/logger"
 	modelreg "github.com/voocel/ainovel-cli/internal/models"
 	"github.com/voocel/ainovel-cli/internal/notify"
@@ -1071,6 +1072,8 @@ func (h *Host) emitEvent(ev Event) {
 	if h.outputClosed {
 		return
 	}
+	ev.Summary = localization.ForDisplay(ev.Summary)
+	ev.Detail = localization.ForDisplay(ev.Detail)
 	// 读锁保证关闭前的事件完整写完；关闭后的事件直接拒绝。
 	LogEvent(ev)
 	select {
@@ -1093,6 +1096,7 @@ func (h *Host) emitDelta(delta string) {
 	if h.outputClosed {
 		return
 	}
+	delta = localization.ForDisplay(delta)
 	select {
 	case h.streamCh <- delta:
 	default:

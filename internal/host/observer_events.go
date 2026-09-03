@@ -8,10 +8,17 @@ import (
 
 	"encoding/json"
 	"github.com/voocel/agentcore"
+	"github.com/voocel/ainovel-cli/internal/localization"
 	"log/slog"
 )
 
 func retryPrefix(attempt, maxRetries int, delay time.Duration) string {
+	if localization.IsVietnamese() {
+		if maxRetries <= 0 {
+			return fmt.Sprintf("Thử lại (lần %d%s): ", attempt, retryDelaySuffix(delay))
+		}
+		return fmt.Sprintf("Thử lại (%d/%d%s): ", attempt, maxRetries, retryDelaySuffix(delay))
+	}
 	if maxRetries <= 0 {
 		if text := formatRetryDelay(delay); text != "" {
 			return fmt.Sprintf("重试 (第%d次，%s后): ", attempt, text)
@@ -22,6 +29,13 @@ func retryPrefix(attempt, maxRetries int, delay time.Duration) string {
 		return fmt.Sprintf("重试 (%d/%d，%s后): ", attempt, maxRetries, text)
 	}
 	return fmt.Sprintf("重试 (%d/%d): ", attempt, maxRetries)
+}
+
+func retryDelaySuffix(delay time.Duration) string {
+	if text := formatRetryDelay(delay); text != "" {
+		return ", sau " + text
+	}
+	return ""
 }
 
 func formatRetryDelay(delay time.Duration) string {

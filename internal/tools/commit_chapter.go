@@ -15,6 +15,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/chapterfacts"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/errs"
+	"github.com/voocel/ainovel-cli/internal/localization"
 	"github.com/voocel/ainovel-cli/internal/revision"
 	"github.com/voocel/ainovel-cli/internal/rules"
 	"github.com/voocel/ainovel-cli/internal/store"
@@ -227,6 +228,13 @@ func (t *CommitChapterTool) Execute(_ context.Context, args json.RawMessage) (js
 	}
 	if content == "" {
 		return nil, fmt.Errorf("no content found for chapter %d: %w", a.Chapter, errs.ErrToolPrecondition)
+	}
+	factsJSON, err := json.Marshal(a.ChapterFacts)
+	if err != nil {
+		return nil, fmt.Errorf("marshal chapter facts for language validation: %w", err)
+	}
+	if err := localization.RequireVietnamese("Bản chương hoàn chỉnh", content, string(factsJSON)); err != nil {
+		return nil, fmt.Errorf("%w: %w", err, errs.ErrToolArgs)
 	}
 	wordCount := utf8.RuneCountInString(content)
 
@@ -491,6 +499,9 @@ func (t *CommitChapterTool) validateRewriteDraft(chapter int, title string, prog
 	}
 	if content == "" {
 		return "", fmt.Errorf("no content found for chapter %d: %w", chapter, errs.ErrToolPrecondition)
+	}
+	if err := localization.RequireVietnamese("Bản chương chỉnh sửa", content, title); err != nil {
+		return "", fmt.Errorf("%w: %w", err, errs.ErrToolArgs)
 	}
 	changed, err := t.rewriteChanged(chapter, content, title)
 	if err != nil {

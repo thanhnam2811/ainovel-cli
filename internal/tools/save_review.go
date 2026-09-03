@@ -67,6 +67,9 @@ func (t *SaveReviewTool) Schema() map[string]any {
 }
 
 func (t *SaveReviewTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {
+	if err := requireVietnameseArgs("Đánh giá chương", args); err != nil {
+		return nil, err
+	}
 	var r domain.ReviewEntry
 	if err := json.Unmarshal(args, &r); err != nil {
 		return nil, fmt.Errorf("invalid args: %w", err)

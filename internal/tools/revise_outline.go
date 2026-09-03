@@ -48,6 +48,9 @@ func (t *ReviseOutlineTool) Schema() map[string]any {
 }
 
 func (t *ReviseOutlineTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {
+	if err := requireVietnameseArgs("Nội dung sửa đại cương", args); err != nil {
+		return nil, err
+	}
 	var input struct {
 		FromChapter int                   `json:"from_chapter"`
 		Replacement []domain.OutlineEntry `json:"replacement"`

@@ -3,6 +3,8 @@ package host
 import (
 	"strings"
 	"unicode/utf8"
+
+	"github.com/voocel/ainovel-cli/internal/localization"
 )
 
 // toolDisplays 配置每个工具在流面板上的展示策略。不在此表中的工具不参与流式
@@ -18,7 +20,7 @@ import (
 // 高亮路径（金 ✻ + 青底蓝下划线 label + dim 横线）的约定前缀，跟 fallback
 // header（streamHeaderFallback）保持一致；改成普通文字会落到正文路径用终端
 // 默认色画掉，title 不再醒目。
-var toolDisplays = map[string]toolDisplay{
+var zhToolDisplays = map[string]toolDisplay{
 	"draft_chapter": {nakedKey: "content"},
 
 	"plan_chapter":        {header: "✻ 规划"},
@@ -32,6 +34,29 @@ var toolDisplays = map[string]toolDisplay{
 	"read_chapter":        {header: "✻ 读章节"},
 	"check_consistency":   {header: "✻ 一致性检查"},
 	"novel_context":       {header: "✻ 查询上下文"},
+}
+
+var viToolDisplays = map[string]toolDisplay{
+	"draft_chapter": {nakedKey: "content"},
+
+	"plan_chapter":        {header: "✻ Lập kế hoạch chương"},
+	"edit_chapter":        {header: "✻ Chỉnh sửa chương"},
+	"commit_chapter":      {header: "✻ Hoàn tất chương"},
+	"save_review":         {header: "✻ Lưu đánh giá"},
+	"save_arc_summary":    {header: "✻ Tóm tắt hồi"},
+	"save_volume_summary": {header: "✻ Tóm tắt quyển"},
+	"save_foundation":     {header: "✻ Lưu nền truyện"},
+	"revise_outline":      {header: "✻ Sửa đại cương"},
+	"read_chapter":        {header: "✻ Đọc chương"},
+	"check_consistency":   {header: "✻ Kiểm tra nhất quán"},
+	"novel_context":       {header: "✻ Nạp ngữ cảnh"},
+}
+
+func activeToolDisplays() map[string]toolDisplay {
+	if localization.IsVietnamese() {
+		return viToolDisplays
+	}
+	return zhToolDisplays
 }
 
 type toolDisplay struct {
@@ -75,7 +100,7 @@ const (
 )
 
 func newToolExtractor(tool string) *jsonFieldExtractor {
-	cfg, ok := toolDisplays[tool]
+	cfg, ok := activeToolDisplays()[tool]
 	if !ok {
 		return nil
 	}

@@ -64,6 +64,9 @@ func (t *SaveArcSummaryTool) Schema() map[string]any {
 }
 
 func (t *SaveArcSummaryTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {
+	if err := requireVietnameseArgs("Tóm tắt hồi", args); err != nil {
+		return nil, err
+	}
 	var a struct {
 		Volume             int                        `json:"volume"`
 		Arc                int                        `json:"arc"`

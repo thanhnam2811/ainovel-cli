@@ -101,3 +101,31 @@ func TestDraftChapterRejectsUnexpandedLayeredChapter(t *testing.T) {
 		t.Fatalf("unexpanded chapter should not become in progress")
 	}
 }
+
+func TestDraftChapterRejectsChineseProseInVietnameseLocaleBeforeWriting(t *testing.T) {
+	t.Setenv("AINOVEL_LOCALE", "vi")
+	s := store.NewStore(t.TempDir())
+	if err := s.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := s.Progress.Init(1); err != nil {
+		t.Fatalf("Progress.Init: %v", err)
+	}
+	if err := s.Progress.UpdatePhase(domain.PhaseWriting); err != nil {
+		t.Fatalf("UpdatePhase: %v", err)
+	}
+
+	args, _ := json.Marshal(map[string]any{
+		"chapter": 1,
+		"content": "Cô mở cửa hầm. 地下室很冷。",
+		"mode":    "write",
+	})
+	_, err := NewDraftChapterTool(s).Execute(context.Background(), args)
+
+	if err == nil || !strings.Contains(err.Error(), "chữ Hán") {
+		t.Fatalf("expected mixed-language prose rejection, got %v", err)
+	}
+	if draft, _ := s.Drafts.LoadDraft(1); draft != "" {
+		t.Fatalf("invalid prose reached the draft store: %q", draft)
+	}
+}

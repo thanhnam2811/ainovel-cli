@@ -50,6 +50,9 @@ func (t *PlanChapterTool) Schema() map[string]any {
 }
 
 func (t *PlanChapterTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {
+	if err := requireVietnameseArgs("Kế hoạch chương", args); err != nil {
+		return nil, err
+	}
 	plan, err := decodeChapterPlanArgs(args)
 	if err != nil {
 		return nil, fmt.Errorf("invalid args: %w: %w", errs.ErrToolArgs, err)

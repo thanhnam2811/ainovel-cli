@@ -10,6 +10,7 @@ import (
 	"github.com/voocel/agentcore/schema"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/errs"
+	"github.com/voocel/ainovel-cli/internal/localization"
 	"github.com/voocel/ainovel-cli/internal/store"
 )
 
@@ -61,6 +62,9 @@ func (t *DraftChapterTool) Execute(_ context.Context, args json.RawMessage) (jso
 	}
 	if a.Content == "" {
 		return nil, fmt.Errorf("content must not be empty: %w", errs.ErrToolArgs)
+	}
+	if err := localization.RequireVietnamese("Nội dung chương", a.Content); err != nil {
+		return nil, fmt.Errorf("%w: %w", err, errs.ErrToolArgs)
 	}
 	if err := t.store.Progress.ValidateChapterWork(a.Chapter); err != nil {
 		return nil, err

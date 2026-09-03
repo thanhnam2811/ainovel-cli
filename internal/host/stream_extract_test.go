@@ -219,6 +219,19 @@ func TestExtract_DraftChapterIgnoresOtherFields(t *testing.T) {
 	mustNotContain(t, out, "1")
 }
 
+func TestVietnameseToolHeadersContainNoHanCharacters(t *testing.T) {
+	t.Setenv("AINOVEL_LOCALE", "vi")
+
+	out := feedAll(t, "novel_context", `{"chapter":1}`)
+
+	mustContain(t, out, "✻ Nạp ngữ cảnh")
+	for _, r := range out {
+		if r >= '\u4e00' && r <= '\u9fff' {
+			t.Fatalf("Vietnamese tool header contains Han character %q: %s", r, out)
+		}
+	}
+}
+
 // ── 行为不变量 ──
 
 func TestExtract_UnknownTool(t *testing.T) {

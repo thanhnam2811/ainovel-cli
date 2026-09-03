@@ -124,7 +124,7 @@ func (o *observer) resetStreamArgLabel(agent, tool string) {
 //
 // 缺任何一条，流式与非流式模型的工具标题就会表现不一致。
 func (o *observer) emitFallbackStreamHeader(tool string) {
-	if _, has := toolDisplays[tool]; has {
+	if _, has := activeToolDisplays()[tool]; has {
 		return // 有 extractor，header 由 extractor 自行输出
 	}
 	o.streamClear()
