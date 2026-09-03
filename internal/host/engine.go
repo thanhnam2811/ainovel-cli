@@ -15,6 +15,7 @@ import (
 	"github.com/voocel/agentcore/subagent"
 
 	"github.com/voocel/ainovel-cli/internal/arbiter"
+	"github.com/voocel/ainovel-cli/internal/blueprint"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/errs"
 	"github.com/voocel/ainovel-cli/internal/flow"
@@ -338,9 +339,26 @@ func (e *engine) planStartFallback(ctx context.Context) (*flow.Instruction, erro
 // retryPlanStart 补裁启动决策并固化(裁定先落事实再执行,与 StartPrepared 同构)。
 func (e *engine) retryPlanStart(ctx context.Context, prompt string) *flow.Instruction {
 	start := time.Now()
-	decision, derr := runObservedDecision(e.observer, "启动补裁", func() (arbiter.PlanStartDecision, error) {
-		return arbiter.DecidePlanStart(ctx, e.arbiterModel, e.planStartPrompt, prompt, e.style)
-	})
+	doc, recognizedBlueprint, parseErr := blueprint.Parse(prompt)
+	var decision arbiter.PlanStartDecision
+	var derr error
+	if parseErr != nil {
+		derr = parseErr
+	} else if recognizedBlueprint {
+		derr = seedNarrativeBlueprint(e.store, doc)
+		decision = arbiter.PlanStartDecision{
+			Planner: "architect_long",
+			Task:    blueprint.CanonicalPlannerTask(prompt),
+			Reason:  "Story Factory supplied an approved typed long-form blueprint",
+		}
+	} else {
+		decision, derr = runObservedDecision(e.observer, "启动补裁", func() (arbiter.PlanStartDecision, error) {
+			return arbiter.DecidePlanStart(ctx, e.arbiterModel, e.planStartPrompt, prompt, e.style)
+		})
+		if derr == nil {
+			decision.Task = preserveRawRequirement(prompt, decision.Task)
+		}
+	}
 	rec := storepkg.DecisionRecord{Kind: "plan_start", Decider: "arbiter", Input: prompt,
 		Reason: decision.Reason, DurationMs: time.Since(start).Milliseconds()}
 	if derr == nil {

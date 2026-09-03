@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/voocel/agentcore/schema"
+	"github.com/voocel/ainovel-cli/internal/blueprint"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/errs"
 	"github.com/voocel/ainovel-cli/internal/store"
@@ -144,6 +145,11 @@ func (t *SaveFoundationTool) Execute(_ context.Context, args json.RawMessage) (j
 		}
 
 	case "outline":
+		if doc, ok, parseErr := t.sourceBlueprint(); parseErr != nil {
+			return nil, parseErr
+		} else if ok && doc != nil {
+			return nil, fmt.Errorf("Story Factory blueprint đã khóa layered_outline; không được thay bằng outline phẳng: %w", errs.ErrToolPrecondition)
+		}
 		var entries []domain.OutlineEntry
 		if err := decode("outline", &entries); err != nil {
 			return nil, err
@@ -174,6 +180,11 @@ func (t *SaveFoundationTool) Execute(_ context.Context, args json.RawMessage) (j
 		var volumes []domain.VolumeOutline
 		if err := decode("layered_outline", &volumes); err != nil {
 			return nil, err
+		}
+		if doc, ok, parseErr := t.sourceBlueprint(); parseErr != nil {
+			return nil, parseErr
+		} else if ok && !blueprint.SameOutline(volumes, doc.Volumes) {
+			return nil, fmt.Errorf("layered_outline khác blueprint đã duyệt của Story Factory; không được đổi timeline, beat hoặc payoff: %w", errs.ErrToolPrecondition)
 		}
 		if err := t.store.Outline.SaveLayeredOutline(volumes); err != nil {
 			return nil, fmt.Errorf("save layered_outline: %w: %w", errs.ErrStoreWrite, err)
@@ -380,6 +391,21 @@ func (t *SaveFoundationTool) Execute(_ context.Context, args json.RawMessage) (j
 	result["remaining"] = remaining
 	result["foundation_ready"] = ready
 	return json.Marshal(result)
+}
+
+func (t *SaveFoundationTool) sourceBlueprint() (*blueprint.Document, bool, error) {
+	meta, err := t.store.RunMeta.Load()
+	if err != nil {
+		return nil, false, fmt.Errorf("load source blueprint: %w: %w", errs.ErrStoreRead, err)
+	}
+	if meta == nil {
+		return nil, false, nil
+	}
+	doc, recognized, err := blueprint.Parse(meta.StartPrompt)
+	if err != nil {
+		return nil, recognized, fmt.Errorf("validate source blueprint: %w: %w", errs.ErrToolPrecondition, err)
+	}
+	return doc, recognized, nil
 }
 
 func foundationArtifact(t string) string {

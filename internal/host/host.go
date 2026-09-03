@@ -17,6 +17,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/agents"
 	"github.com/voocel/ainovel-cli/internal/agents/ctxpack"
 	"github.com/voocel/ainovel-cli/internal/arbiter"
+	"github.com/voocel/ainovel-cli/internal/blueprint"
 	"github.com/voocel/ainovel-cli/internal/bootstrap"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/flow"
@@ -381,13 +382,35 @@ func (h *Host) StartPrepared(rawRequirement string) error {
 	if err := h.store.RunMeta.SetStartPrompt(rawRequirement); err != nil {
 		return fmt.Errorf("记录创作需求: %w", err)
 	}
+	doc, recognizedBlueprint, err := blueprint.Parse(rawRequirement)
+	if err != nil {
+		return fmt.Errorf("invalid Story Factory narrative blueprint: %w", err)
+	}
+	if recognizedBlueprint {
+		if err := seedNarrativeBlueprint(h.store, doc); err != nil {
+			return fmt.Errorf("persist Story Factory narrative blueprint: %w", err)
+		}
+	}
 
 	// 启动裁定:失败显式报错中止(启动期用户在场,报错优于猜测)。
 	start := time.Now()
-	decision, derr := runObservedDecision(h.observer, "启动裁定", func() (arbiter.PlanStartDecision, error) {
-		return arbiter.DecidePlanStart(h.runCtx, h.arbiterModel(),
-			h.bundle.Prompts.ArbiterPlanStart, rawRequirement, h.cfg.Style)
-	})
+	var decision arbiter.PlanStartDecision
+	var derr error
+	if recognizedBlueprint {
+		decision = arbiter.PlanStartDecision{
+			Planner: "architect_long",
+			Task:    blueprint.CanonicalPlannerTask(rawRequirement),
+			Reason:  "Story Factory supplied an approved typed long-form blueprint",
+		}
+	} else {
+		decision, derr = runObservedDecision(h.observer, "启动裁定", func() (arbiter.PlanStartDecision, error) {
+			return arbiter.DecidePlanStart(h.runCtx, h.arbiterModel(),
+				h.bundle.Prompts.ArbiterPlanStart, rawRequirement, h.cfg.Style)
+		})
+		if derr == nil {
+			decision.Task = preserveRawRequirement(rawRequirement, decision.Task)
+		}
+	}
 	rec := storepkg.DecisionRecord{Kind: "plan_start", Decider: "arbiter", Input: rawRequirement,
 		Reason: decision.Reason, DurationMs: time.Since(start).Milliseconds()}
 	if derr == nil {
@@ -414,6 +437,34 @@ func (h *Host) StartPrepared(rawRequirement string) error {
 		Summary: fmt.Sprintf("开始创作（规划师: %s——%s）", decision.Planner, decision.Reason), Level: "info"})
 	if !h.startEngine(&flow.Instruction{Agent: decision.Planner, Task: decision.Task, Reason: decision.Reason}) {
 		return fmt.Errorf("Engine 已在运行或正在停止，无法启动新书")
+	}
+	return nil
+}
+
+func preserveRawRequirement(rawRequirement, enrichment string) string {
+	return strings.TrimSpace(rawRequirement) + "\n\n---\nNon-authoritative planner enrichment:\n" + strings.TrimSpace(enrichment)
+}
+
+func seedNarrativeBlueprint(st *storepkg.Store, doc *blueprint.Document) error {
+	if err := st.Outline.SaveLayeredOutline(doc.Volumes); err != nil {
+		return err
+	}
+	if err := st.RunMeta.SetPlanningTier(domain.PlanningTierLong); err != nil {
+		return err
+	}
+	if err := st.Progress.AdvancePhase(domain.PhaseOutline); err != nil {
+		return err
+	}
+	if err := st.Progress.SetTotalChapters(domain.EstimatedChapterCapacity(doc.Volumes)); err != nil {
+		return err
+	}
+	if err := st.Progress.SetLayered(true); err != nil {
+		return err
+	}
+	if len(doc.Volumes) > 0 && len(doc.Volumes[0].Arcs) > 0 {
+		if err := st.Progress.UpdateVolumeArc(doc.Volumes[0].Index, doc.Volumes[0].Arcs[0].Index); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -63,6 +63,33 @@ func TestSaveFoundationPersistsPlanningTier(t *testing.T) {
 	}
 }
 
+func TestSaveFoundationRejectsOutlineThatDriftsFromStoryFactoryBlueprint(t *testing.T) {
+	dir := t.TempDir()
+	st := store.NewStore(dir)
+	if err := st.Init(); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Progress.Init(0); err != nil {
+		t.Fatal(err)
+	}
+	blueprint := `{"schema":"story-factory.narrative-blueprint.v1","story":{"name":"X"},"narrative_design":{},"pacing_contract":{"depth_target":"fast_commercial"},"volumes":[{"index":1,"title":"V1","theme":"T","arcs":[{"index":1,"title":"A1","goal":"G","chapters":[{"chapter":1,"title":"Mua RV","core_event":"30 ngày trước tận thế: mua RV; payoff BASE_BUILDING","hook":"Hệ thống thức tỉnh","scenes":["Trùng sinh","Mua RV"]}]}]}]}`
+	if err := st.RunMeta.SetStartPrompt(blueprint); err != nil {
+		t.Fatal(err)
+	}
+	drifted := []domain.VolumeOutline{{
+		Index: 1, Title: "V1", Theme: "T", Arcs: []domain.ArcOutline{{
+			Index: 1, Title: "A1", Goal: "G", Chapters: []domain.OutlineEntry{{
+				Chapter: 1, Title: "Đấu zombie", CoreEvent: "Sau tận thế: bắn zombie", Hook: "Chọn phần thưởng", Scenes: []string{"Bắn", "Kiểm kê"},
+			}},
+		}},
+	}}
+	args, _ := json.Marshal(map[string]any{"type": "layered_outline", "scale": "long", "content": drifted})
+
+	if _, err := NewSaveFoundationTool(st).Execute(context.Background(), args); err == nil || !strings.Contains(err.Error(), "khác blueprint") {
+		t.Fatalf("expected drift rejection, got %v", err)
+	}
+}
+
 func TestSaveFoundationPremiseDoesNotOwnBookMetadata(t *testing.T) {
 	dir := t.TempDir()
 	store := store.NewStore(dir)
