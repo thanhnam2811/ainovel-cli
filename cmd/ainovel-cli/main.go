@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/voocel/ainovel-cli/assets"
@@ -122,7 +123,7 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 		if err != nil {
 			die("error: %v", err)
 		}
-		if err := headless.Run(cfg, bundle, headless.Options{Prompt: prompt}); err != nil {
+		if err := headless.Run(cfg, bundle, headless.Options{Prompt: prompt, MaxChapters: opts.MaxChapters}); err != nil {
 			die("error: %v", err)
 		}
 		return
@@ -139,6 +140,7 @@ type cliOptions struct {
 	Headless      bool
 	Prompt        string
 	PromptFile    string
+	MaxChapters   int
 	Version       bool
 	Update        bool
 	UpdateVersion string
@@ -186,6 +188,16 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 			}
 			opts.PromptFile = argv[i+1]
 			i++
+		case "--max-chapters":
+			if i+1 >= len(argv) {
+				return opts, nil, fmt.Errorf("--max-chapters thiếu giá trị")
+			}
+			value, err := strconv.Atoi(argv[i+1])
+			if err != nil || value <= 0 {
+				return opts, nil, fmt.Errorf("--max-chapters phải là số nguyên dương")
+			}
+			opts.MaxChapters = value
+			i++
 		default:
 			args = append(args, argv[i])
 		}
@@ -193,10 +205,13 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 	if opts.Prompt != "" && opts.PromptFile != "" {
 		return opts, nil, fmt.Errorf("--prompt 和 --prompt-file 不能同时使用")
 	}
-	if opts.Version && (opts.Update || opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
+	if opts.MaxChapters > 0 && !opts.Headless {
+		return opts, nil, fmt.Errorf("--max-chapters chỉ dùng được với --headless")
+	}
+	if opts.Version && (opts.Update || opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || opts.MaxChapters > 0 || len(args) > 0) {
 		return opts, nil, fmt.Errorf("version 不能与其他启动参数混用")
 	}
-	if opts.Update && (opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
+	if opts.Update && (opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || opts.MaxChapters > 0 || len(args) > 0) {
 		return opts, nil, fmt.Errorf("update 不能与其他启动参数混用")
 	}
 	return opts, args, nil

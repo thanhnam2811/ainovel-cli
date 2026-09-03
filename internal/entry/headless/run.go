@@ -17,9 +17,10 @@ import (
 )
 
 type Options struct {
-	Prompt string
-	Stdout io.Writer
-	Stderr io.Writer
+	Prompt      string
+	MaxChapters int
+	Stdout      io.Writer
+	Stderr      io.Writer
 }
 
 // Run 以无界面模式运行会话内核，直接消费 Engine 事件与流式输出。
@@ -78,13 +79,14 @@ func Run(cfg bootstrap.Config, bundle assets.Bundle, opts Options) error {
 			return fmt.Errorf(localization.Select("chế độ headless cần --prompt hoặc một phiên có thể tiếp tục trong %q", "headless 模式需要 --prompt，或输出目录 %q 下已有可恢复会话"), eng.Dir())
 		}
 		fmt.Fprintf(stderr, localization.Select("headless tiếp tục: %s (%s)\n", "headless 恢复: %s (%s)\n"), eng.Dir(), localization.ForDisplay(label))
-		return consume(eng, stdout, stderr, false)
+		return consume(eng, stdout, stderr, false, opts.MaxChapters)
 	}
 
-	return consume(eng, stdout, stderr, false)
+	return consume(eng, stdout, stderr, false, opts.MaxChapters)
 }
 
-func consume(eng *host.Host, stdout, stderr io.Writer, roundHasContent bool) error {
+func consume(eng *host.Host, stdout, stderr io.Writer, roundHasContent bool, maxChapters int) error {
+	stoppingAtLimit := false
 	for {
 		select {
 		case ev, ok := <-eng.Events():
@@ -92,6 +94,10 @@ func consume(eng *host.Host, stdout, stderr io.Writer, roundHasContent bool) err
 				return nil
 			}
 			writeEvent(stderr, ev)
+			if !stoppingAtLimit && maxChapters > 0 && eng.Snapshot().CompletedCount >= maxChapters {
+				eng.Abort()
+				stoppingAtLimit = true
+			}
 		case delta, ok := <-eng.Stream():
 			if !ok {
 				continue
